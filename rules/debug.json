@@ -1,0 +1,43 @@
+{
+  "rules": [
+    {
+      "id": "debug.django-debug-true",
+      "title": "Django DEBUG enabled",
+      "severity": "high",
+      "cwe": "CWE-489",
+      "languages": ["python"],
+      "pattern": "DEBUG\\s*=\\s*True",
+      "message": "DEBUG=True leaks stack traces and settings in production.",
+      "fix": "Force DEBUG=False in production via environment."
+    },
+    {
+      "id": "debug.flask-debug",
+      "title": "Flask debug mode",
+      "severity": "critical",
+      "cwe": "CWE-94",
+      "languages": ["python"],
+      "pattern": "app\\.run\\([^\\n]*debug\\s*=\\s*True|FLASK_DEBUG\\s*=\\s*1",
+      "message": "Flask debug/reloader can expose an interactive debugger (RCE risk).",
+      "fix": "Never enable debug in production."
+    },
+    {
+      "id": "debug.express-stack",
+      "title": "Express verbose error handler",
+      "severity": "medium",
+      "cwe": "CWE-209",
+      "languages": ["javascript", "typescript"],
+      "pattern": "(?i)app\\.use\\([^)]*err[^)]*stack|res\\.send\\([^)]*err\\.stack",
+      "message": "Sending stack traces to clients aids attackers.",
+      "fix": "Log stacks server-side; return generic errors to clients."
+    },
+    {
+      "id": "debug.spring-actuator-exposed",
+      "title": "Spring Actuator exposure hint",
+      "severity": "medium",
+      "cwe": "CWE-200",
+      "pattern": "(?i)management\\.endpoints\\.web\\.exposure\\.include\\s*=\\s*\\*|exposure\\.include:\\s*\\*",
+      "message": "Exposing all actuators can leak env and heap dumps.",
+      "fix": "Expose only health/info; lock down with auth and network policy."
+    }
+  ]
+}

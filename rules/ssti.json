@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "id": "ssti.jinja-render-string",
+      "title": "Jinja2 template string from variable",
+      "severity": "critical",
+      "cwe": "CWE-1336",
+      "languages": ["python"],
+      "pattern": "(?i)(jinja2\\.|Environment\\(|Template\\().*(from_string|render_template_string)|render_template_string\\s*\\(",
+      "message": "Rendering attacker-influenced templates enables SSTI → RCE.",
+      "fix": "Never render user-controlled template source; use fixed templates + autoescape."
+    },
+    {
+      "id": "ssti.flask-render-template-string",
+      "title": "Flask render_template_string",
+      "severity": "high",
+      "cwe": "CWE-1336",
+      "languages": ["python"],
+      "pattern": "render_template_string\\s*\\(",
+      "message": "render_template_string is an SSTI sink if any part of the template is user-controlled.",
+      "fix": "Use render_template with static files only."
+    },
+    {
+      "id": "ssti.nodejs-pug-compile",
+      "title": "Pug/Jade compile with dynamic input",
+      "severity": "high",
+      "cwe": "CWE-94",
+      "languages": ["javascript", "typescript"],
+      "pattern": "(?i)(pug|jade)\\.(compile|render)\\s*\\(",
+      "message": "Compiling templates from request data can lead to SSTI/RCE.",
+      "fix": "Only compile trusted template sources."
+    }
+  ]
+}

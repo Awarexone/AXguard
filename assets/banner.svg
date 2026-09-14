@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="420" viewBox="0 0 1600 420" role="img" aria-label="AXguard by AwareXone  Pre-ship security gate">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c1117"/>
+      <stop offset="55%" stop-color="#121a24"/>
+      <stop offset="100%" stop-color="#0c1117"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="20%" cy="0%" r="60%">
+      <stop offset="0%" stop-color="#163028" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#163028" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3dd6c6"/>
+      <stop offset="100%" stop-color="#2aa89c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="420" fill="url(#bg)"/>
+  <rect width="1600" height="420" fill="url(#glow)"/>
+  <rect x="0" y="0" width="8" height="420" fill="url(#accent)"/>
+  <text x="80" y="175" fill="#3dd6c6" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="22" letter-spacing="6" font-weight="600">AWAREXONE</text>
+  <text x="80" y="265" fill="#e7eef7" font-family="Syne, Inter, system-ui, sans-serif" font-size="96" font-weight="800" letter-spacing="-2">AXguard</text>
+  <text x="80" y="320" fill="#8b9bb0" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="28">Pre-ship security gate for source &amp; artifacts</text>
+  <text x="80" y="365" fill="#5f738a" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="18">audit · triage · fix · report · ci</text>
+</svg>

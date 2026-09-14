@@ -1,0 +1,33 @@
+{
+  "rules": [
+    {
+      "id": "path.python-open-join-user",
+      "title": "Filesystem open with joined path",
+      "severity": "high",
+      "cwe": "CWE-22",
+      "languages": ["python"],
+      "pattern": "open\\s*\\(\\s*(os\\.path\\.join|pathlib\\.|Path\\()[^\\n]*\\+|open\\s*\\(\\s*[a-zA-Z_][\\w\\.]*\\s*[,)]",
+      "message": "Opening paths built from variables can enable path traversal / LFI.",
+      "fix": "Resolve under a fixed root and reject .. segments; use allowlists."
+    },
+    {
+      "id": "path.send-file-user",
+      "title": "send_file / sendFile with variable path",
+      "severity": "high",
+      "cwe": "CWE-22",
+      "pattern": "(?i)(send_file|sendFile|res\\.download)\\s*\\(\\s*[a-zA-Z_][\\w\\.]*",
+      "message": "File download helpers with variable paths are common traversal sinks.",
+      "fix": "Map IDs to stored filenames; never pass raw user paths."
+    },
+    {
+      "id": "path.php-include",
+      "title": "PHP include/require with variable",
+      "severity": "critical",
+      "cwe": "CWE-98",
+      "languages": ["php"],
+      "pattern": "(?i)\\b(include|require|include_once|require_once)\\s*(\\(|\\s)\\s*\\$",
+      "message": "Dynamic includes enable LFI and often RCE via wrappers.",
+      "fix": "Use a strict allowlist of files; never include user input."
+    }
+  ]
+}

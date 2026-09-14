@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "id": "ssrf.python-requests-user-url",
+      "title": "HTTP client called with a variable URL",
+      "severity": "medium",
+      "cwe": "CWE-918",
+      "languages": ["python"],
+      "pattern": "requests\\.(get|post|put|patch|delete|head|request)\\(\\s*[a-zA-Z_][\\w\\.]*\\s*[,)]",
+      "message": "Outbound HTTP with a non-literal URL. If the URL is user-controlled, enforce allowlists and block link-local/metadata ranges.",
+      "fix": "Allowlist schemes/hosts; block 169.254.169.254, localhost, private ranges; resolve DNS carefully."
+    },
+    {
+      "id": "ssrf.js-fetch-concat",
+      "title": "fetch() built from concatenation",
+      "severity": "medium",
+      "cwe": "CWE-918",
+      "languages": ["javascript", "typescript"],
+      "pattern": "fetch\\(\\s*[`'\"][^`'\"]*[`'\"]\\s*\\+|fetch\\(\\s*[a-zA-Z_][\\w\\.]*\\s*[,)]",
+      "message": "fetch target may be attacker-influenced. Validate destination before egress.",
+      "fix": "Allowlist destinations; never pass raw user URLs to server-side fetch."
+    }
+  ]
+}

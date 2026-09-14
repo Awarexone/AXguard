@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "id": "graphql.disable-auth-introspection",
+      "title": "GraphQL introspection left enabled",
+      "severity": "low",
+      "cwe": "CWE-200",
+      "pattern": "(?i)introspection\\s*:\\s*true|IntrospectionEnabled\\s*=\\s*true",
+      "message": "Introspection in production helps attackers map the graph.",
+      "fix": "Disable introspection in production; keep schema docs internal."
+    },
+    {
+      "id": "graphql.apollo-csrf-off",
+      "title": "GraphQL CSRF protection disabled",
+      "severity": "medium",
+      "cwe": "CWE-352",
+      "pattern": "(?i)csrfPrevention\\s*:\\s*false|preventOptions\\s*:\\s*false",
+      "message": "Disabling GraphQL CSRF protections exposes cookie-auth apps.",
+      "fix": "Keep CSRF prevention on for browser cookie sessions."
+    }
+  ]
+}

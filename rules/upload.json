@@ -1,0 +1,23 @@
+{
+  "rules": [
+    {
+      "id": "upload.no-extension-check",
+      "title": "File upload saved with original filename",
+      "severity": "high",
+      "cwe": "CWE-434",
+      "pattern": "(?i)(save|write|mv|rename|move_uploaded_file)\\s*\\([^\\n]*(originalname|filename|file\\.name)",
+      "message": "Saving uploads under client-controlled names enables overwrite / extension tricks.",
+      "fix": "Generate server-side names; allowlist extensions and content-types; store outside web root."
+    },
+    {
+      "id": "upload.multer-any",
+      "title": "Multer .any() unrestricted upload",
+      "severity": "medium",
+      "cwe": "CWE-434",
+      "languages": ["javascript", "typescript"],
+      "pattern": "multer\\([^)]*\\)\\.any\\s*\\(|upload\\.any\\s*\\(",
+      "message": "Accepting any multipart field increases upload attack surface.",
+      "fix": "Use .single/.fields with size and type limits."
+    }
+  ]
+}

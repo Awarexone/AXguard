@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "id": "cloud.aws-metadata-url",
+      "title": "AWS EC2 metadata URL referenced",
+      "severity": "medium",
+      "cwe": "CWE-918",
+      "pattern": "169\\.254\\.169\\.254",
+      "message": "Link-local metadata endpoint. In app code this often pairs with SSRF to steal cloud credentials.",
+      "fix": "Never fetch metadata from request-influenced URLs; use the instance role SDK path with IMDSv2."
+    },
+    {
+      "id": "cloud.wildcard-cors",
+      "title": "CORS Allow-Origin wildcard with credentials pattern",
+      "severity": "medium",
+      "cwe": "CWE-942",
+      "pattern": "(?i)Access-Control-Allow-Origin['\\\"\\s:=]+\\*|cors\\(.*origin\\s*[:=]\\s*['\\\"]\\*['\\\"]",
+      "message": "Wildcard CORS is risky when combined with credentialed requests or sensitive APIs.",
+      "fix": "Reflect an allowlisted origin; never pair * with Access-Control-Allow-Credentials: true."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "rules": [
+    {
+      "id": "crypto.hardcoded-iv-or-key",
+      "title": "Hard-coded crypto key or IV",
+      "severity": "high",
+      "cwe": "CWE-321",
+      "pattern": "(?i)(aes[_-]?key|secret[_-]?key|encryption[_-]?key|iv)\\s*=\\s*b?['\\\"][A-Za-z0-9+/=_-]{8,}['\\\"]",
+      "message": "Hard-coded keys/IVs in source are recoverable by anyone with the repo.",
+      "fix": "Load keys from a KMS/secret manager; generate unique IVs per message."
+    },
+    {
+      "id": "crypto.md5-password",
+      "title": "MD5/SHA1 used near password hashing",
+      "severity": "high",
+      "cwe": "CWE-328",
+      "pattern": "(?i)(md5|sha1)\\s*\\([^\\n]*(password|passwd|pwd)|hashlib\\.(md5|sha1)\\s*\\([^\\n]*(password|passwd|pwd)",
+      "message": "Fast hashes are unsuitable for passwords (offline cracking).",
+      "fix": "Use bcrypt, scrypt, Argon2, or PBKDF2 with strong parameters."
+    },
+    {
+      "id": "crypto.math-random-token",
+      "title": "Math.random used for security token",
+      "severity": "medium",
+      "cwe": "CWE-338",
+      "languages": ["javascript", "typescript"],
+      "pattern": "(?i)(token|secret|csrf|session|nonce).*Math\\.random|Math\\.random.*?(token|secret|csrf|session|nonce)",
+      "message": "Math.random is not cryptographically secure.",
+      "fix": "Use crypto.randomBytes / crypto.getRandomValues."
+    },
+    {
+      "id": "crypto.verify-false",
+      "title": "TLS certificate verification disabled",
+      "severity": "high",
+      "cwe": "CWE-295",
+      "pattern": "(?i)(verify\\s*=\\s*False|rejectUnauthorized\\s*:\\s*false|InsecureSkipVerify\\s*:\\s*true|CURLOPT_SSL_VERIFYPEER.*0)",
+      "message": "Disabling TLS verification enables MITM on sensitive traffic.",
+      "fix": "Keep verification on; fix trust stores instead of disabling checks."
+    }
+  ]
+}

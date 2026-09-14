@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "id": "xss.innerhtml-assign",
+      "title": "innerHTML assignment",
+      "severity": "medium",
+      "cwe": "CWE-79",
+      "languages": ["javascript", "typescript"],
+      "pattern": "\\.innerHTML\\s*=",
+      "message": "innerHTML is an XSS sink if the right-hand side includes untrusted data.",
+      "fix": "Use textContent, or sanitize with a maintained sanitizer and a strict allowlist."
+    },
+    {
+      "id": "xss.document-write",
+      "title": "document.write",
+      "severity": "medium",
+      "cwe": "CWE-79",
+      "languages": ["javascript", "typescript"],
+      "pattern": "document\\.write\\s*\\(",
+      "message": "document.write can inject HTML/script into the document.",
+      "fix": "Replace with DOM APIs that set text or sanitized nodes."
+    },
+    {
+      "id": "xss.dangerously-set-inner-html",
+      "title": "React dangerouslySetInnerHTML",
+      "severity": "medium",
+      "cwe": "CWE-79",
+      "languages": ["javascript", "typescript"],
+      "pattern": "dangerouslySetInnerHTML",
+      "message": "React HTML injection sink. Safe only with trusted, sanitized markup.",
+      "fix": "Sanitize HTML server-side or with DOMPurify; prefer structured components."
+    }
+  ]
+}
