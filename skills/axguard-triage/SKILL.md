@@ -5,7 +5,7 @@ description: Triage AXguard scanner output — false-positive filter, severity p
 
 # AXguard Triage
 
-Fewer confirmed bugs beat a long maybe-list. Read `.findings/axguard/axguard-report.json` when present. If `.findings/axguard/verification.json` is present, prefer Judge statuses (`VERIFIED` / `LIKELY` / `UNVERIFIED` / `FALSE_POSITIVE`) when deciding Keep vs Drop — hunters emit candidates only; do not promote pattern-only `UNVERIFIED` hits to critical. Defensive reasoning only.
+Fewer confirmed bugs beat a long maybe-list. Read `.findings/axguard/axguard-report.json` when present. If `.findings/axguard/adversary.json` is present, prefer adversary final statuses (`CONFIRMED` / `LIKELY` / `UNVERIFIED` / `FALSE_POSITIVE` / `REQUIRES_REVIEW`) over raw Judge labels when deciding Keep vs Drop. Else if `.findings/axguard/verification.json` is present, use Judge statuses (`VERIFIED` / `LIKELY` / `UNVERIFIED` / `FALSE_POSITIVE`) — hunters emit candidates only; do not promote pattern-only `UNVERIFIED` hits to critical. Defensive reasoning only.
 
 ## Gate (all must pass to keep)
 

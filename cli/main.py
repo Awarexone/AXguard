@@ -13,6 +13,7 @@ from engines.dataflow import analyze_dataflow, write_dataflow_report
 from engines.paths import default_rules_dir
 from engines.report import render_report, write_reports
 from engines.scanner import ScanOptions, run_scan
+from engines.adversary import run_adversary, write_adversary_report
 from engines.verify import run_verification, write_verification_report
 
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
@@ -89,6 +90,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
 
+    adversary = sub.add_parser(
+        "adversary",
+        help="False Positive Adversary diagnostic (not a vuln report)",
+    )
+    adversary.add_argument(
+        "path", nargs="?", default=".", help="Target path (default: .)"
+    )
+    adversary.add_argument(
+        "--out-dir",
+        default=".findings/axguard",
+        help="Directory for adversary artifacts (default: .findings/axguard)",
+    )
+    adversary.add_argument(
+        "--no-banner", action="store_true", help="Hide the ASCII banner"
+    )
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
     return parser
@@ -104,6 +121,7 @@ AXguard — start with the workflow you need
   Map attack surface / app model  axguard surface . |  /axguard-surface
   Dataflow / taint paths          axguard flow .    |  /axguard-flow
   Hunter → Judge verification     axguard verify .  |  /axguard-verify
+  False Positive Adversary        axguard adversary .  |  /axguard-adversary
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -164,9 +182,14 @@ def main(argv: list[str] | None = None) -> int:
         print(HELP_TEXT)
         return 0
 
-    if args.command in {"scan", "audit", "surface", "flow", "verify"} and not getattr(
-        args, "no_banner", False
-    ):
+    if args.command in {
+        "scan",
+        "audit",
+        "surface",
+        "flow",
+        "verify",
+        "adversary",
+    } and not getattr(args, "no_banner", False):
         print_banner()
         print()
 
@@ -225,6 +248,21 @@ def main(argv: list[str] | None = None) -> int:
                 f"LIKELY={vs.get('LIKELY', 0)} "
                 f"UNVERIFIED={vs.get('UNVERIFIED', 0)} "
                 f"FALSE_POSITIVE={vs.get('FALSE_POSITIVE', 0)}"
+            )
+        if result.get("adversary_paths"):
+            ap = result["adversary_paths"]
+            print(f"  adversary {ap.get('json')}")
+            print(f"  adversary {ap.get('markdown')}")
+        if result.get("adversary_summary"):
+            ads = result["adversary_summary"]
+            print(
+                "  adversary counts: "
+                f"findings={ads.get('finding_count', 0)} "
+                f"CONFIRMED={ads.get('CONFIRMED', 0)} "
+                f"LIKELY={ads.get('LIKELY', 0)} "
+                f"UNVERIFIED={ads.get('UNVERIFIED', 0)} "
+                f"FALSE_POSITIVE={ads.get('FALSE_POSITIVE', 0)} "
+                f"REQUIRES_REVIEW={ads.get('REQUIRES_REVIEW', 0)}"
             )
         if args.open_summary:
             print()
@@ -305,6 +343,28 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  FALSE_POSITIVE  {summary.get('FALSE_POSITIVE', 0)}")
         print(f"  json            {paths['json']}")
         print(f"  md              {paths['markdown']}")
+        return 0
+
+    if args.command == "adversary":
+        target = Path(args.path).resolve()
+        if not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        out_dir = Path(args.out_dir)
+        adv_result = run_adversary(target)
+        paths = write_adversary_report(adv_result, out_dir)
+        summary = adv_result.get("summary") or {}
+        print("adversary complete (diagnostic — not a vuln report)")
+        print(f"  findings         {summary.get('finding_count', 0)}")
+        print(f"  challenged       {summary.get('challenged_count', 0)}")
+        print(f"  CONFIRMED        {summary.get('CONFIRMED', 0)}")
+        print(f"  LIKELY           {summary.get('LIKELY', 0)}")
+        print(f"  UNVERIFIED       {summary.get('UNVERIFIED', 0)}")
+        print(f"  FALSE_POSITIVE   {summary.get('FALSE_POSITIVE', 0)}")
+        print(f"  REQUIRES_REVIEW  {summary.get('REQUIRES_REVIEW', 0)}")
+        print(f"  json             {paths['json']}")
+        print(f"  md               {paths['markdown']}")
         return 0
 
     parser.print_help()
