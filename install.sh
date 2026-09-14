@@ -43,12 +43,29 @@ copy_tree_items() {
   local item name
   for item in $src_glob; do
     [ -e "$item" ] || continue
+    # Skip the security/ namespace directory itself; nested skills installed separately
+    [ "$(basename "$item")" = "security" ] && continue
+    [ "$(basename "$item")" = "index.yaml" ] && continue
     name="$(basename "$item")"
     rm -rf "$dest_dir/$name"
     mkdir -p "$dest_dir/$name"
     cp -R "$item"/. "$dest_dir/$name/"
     echo "installed $label: $name → $dest_dir/$name"
   done
+}
+
+install_security_skills() {
+  local dest_dir="$1"
+  mkdir -p "$dest_dir"
+  local skill_md skill_dir name
+  while IFS= read -r skill_md; do
+    skill_dir="$(dirname "$skill_md")"
+    name="$(basename "$skill_dir")"
+    rm -rf "$dest_dir/$name"
+    mkdir -p "$dest_dir/$name"
+    cp -R "$skill_dir"/. "$dest_dir/$name/"
+    echo "installed security skill: $name → $dest_dir/$name"
+  done < <(find skills/security -type f -name SKILL.md 2>/dev/null | sort)
 }
 
 copy_files() {
@@ -70,6 +87,7 @@ install_claude() {
   if [ "$SCOPE" = "project" ]; then root=".claude"; else root="$HOME/.claude"; fi
   echo "AXguard → Claude Code ($SCOPE)"
   copy_tree_items "skills/*" "$root/skills" "skill"
+  install_security_skills "$root/skills"
   copy_files "commands/*.md" "$root/commands" "command"
 }
 
@@ -78,6 +96,7 @@ install_cursor() {
   if [ "$SCOPE" = "project" ]; then root=".cursor"; else root="$HOME/.cursor"; fi
   echo "AXguard → Cursor ($SCOPE)"
   copy_tree_items "skills/*" "$root/skills" "skill"
+  install_security_skills "$root/skills"
   # Cursor also picks up project rules; commands map to skills for slash-style prompts
   mkdir -p "$root/commands"
   copy_files "commands/*.md" "$root/commands" "command"
@@ -92,6 +111,7 @@ install_opencode() {
   fi
   echo "AXguard → OpenCode ($SCOPE)"
   copy_tree_items "skills/*" "$root/skills" "skill"
+  install_security_skills "$root/skills"
   copy_files "commands/*.md" "$root/commands" "command"
 }
 
@@ -100,6 +120,7 @@ install_codex() {
   if [ "$SCOPE" = "project" ]; then root=".codex"; else root="${CODEX_HOME:-$HOME/.codex}"; fi
   echo "AXguard → Codex ($SCOPE)"
   copy_tree_items "skills/*" "$root/skills" "skill"
+  install_security_skills "$root/skills"
   copy_files "commands/*.md" "$root/commands" "command"
 }
 
@@ -108,6 +129,7 @@ install_agents() {
   if [ "$SCOPE" = "project" ]; then root=".agents"; else root="$HOME/.agents"; fi
   echo "AXguard → shared Agent Skills ($SCOPE)"
   copy_tree_items "skills/*" "$root/skills" "skill"
+  install_security_skills "$root/skills"
 }
 
 echo ""

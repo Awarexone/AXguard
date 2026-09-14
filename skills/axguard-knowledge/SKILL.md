@@ -42,6 +42,19 @@ Reference skill for **pre-ship static review**. Distills web and agent vuln clas
 | Debug / verbose errors | CWE-489, CWE-209 | A05 |
 | LLM / agent tool risks | CWE-77, CWE-94 | OWASP LLM |
 
+## Domain skills (deep reasoning)
+
+For class depth beyond this digest, load research-backed skills under `skills/security/` (registry: `skills/index.yaml`):
+
+| Need | Skill |
+|------|--------|
+| Threat / surface | `threat-modeling`, `attack-surface-mapping`, `security-architecture-review` |
+| Identity | `authentication-analysis`, `authorization-analysis`, `session-security`, `jwt-security`, `oauth-security` |
+| AppSec | `api-security`, `sql-injection`, `xss-analysis`, `ssrf-analysis`, `ssti-analysis`, `command-injection`, `path-traversal`, `file-upload-security`, `deserialization-security`, `prototype-pollution`, `graphql-security`, `websocket-security` |
+| Infra | `secrets-detection`, `cloud-security`, `configuration-security`, `supply-chain-security` |
+| AI | `ai-application-security`, `prompt-injection`, `ai-agent-security`, `mcp-security` |
+| Ops | `security-triage`, `security-remediation` |
+
 ## Rules of engagement
 
 - Prefer `axguard audit` / `axguard scan` for deterministic leads; this skill explains and verifies.
@@ -52,3 +65,4 @@ Reference skill for **pre-ship static review**. Distills web and agent vuln clas
 
 - `references/vuln-classes.md` — class distillations
 - `references/sources.md` — inspiration and datasets (summaries, not verbatim copies)
+- Repo-wide provenance: `references/` (frameworks, repositories, datasets, sources)
