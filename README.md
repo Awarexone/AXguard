@@ -10,7 +10,7 @@
 
 ### Built by [Shuvonsec](https://github.com/shuvonsec)
 
-AXguard is built by **[Shuvonsec](https://github.com/shuvonsec)** — a certified ethical hacker and security researcher. He ranked **#1 worldwide** on the TryHackMe monthly leaderboard in 2025. He works on AI security and cybersecurity agents, and builds open-source tools to make AI-built applications safer.
+AXguard is built by **[Shuvonsec](https://github.com/shuvonsec)** — Ethical hacker and security researcher. He ranked **#1 worldwide** on the TryHackMe monthly leaderboard in 2025. He works on AI security and cybersecurity agents, and builds open-source tools to make AI-built applications safer.
 
 <p align="center">
   <a href="https://github.com/shuvonsec">
