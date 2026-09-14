@@ -6,7 +6,7 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 
 | Package / path | Responsibility |
 |---|---|
-| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `help`, `version` |
+| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `adversary`, `help`, `version` |
 | `engines/scanner.py` | Orchestrates one scan pass |
 | `engines/rules_loader.py` | Loads `rules/*.json` (and a narrow YAML subset) |
 | `engines/source_scan.py` | Walks the tree, applies regex rules, builds findings |
@@ -14,6 +14,7 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 | `engines/app_model/` | Application understanding + attack-surface graph (`axguard surface`) |
 | `engines/dataflow/` | Source→sink taint paths over the app model (`axguard flow`) |
 | `engines/verify/` | Hunter → Judge verification diagnostic (`axguard verify`) |
+| `engines/adversary/` | False Positive Adversary — challenge Judge outcomes (`axguard adversary`) |
 | `engines/report.py` | text / json / markdown / HTML renderers + `write_reports` |
 | `engines/banner.py` | ASCII branding |
 | `engines/paths.py` | Resolves package root + default `rules/` |
@@ -62,7 +63,19 @@ sort by severity, then file/line
 
 ## Audit phases
 
-Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; it also soft-runs Phase 2 dataflow and Phase 3 Hunter→Judge verification (diagnostic artifacts only — never fails the audit). Other phases still structure findings by rule prefix.
+Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; it also soft-runs Phase 2 dataflow, Phase 3 Hunter→Judge verification, and Phase 4 False Positive Adversary (diagnostic artifacts only — never fails the audit). Other phases still structure findings by rule prefix.
+
+### Verification → Adversary pipeline
+
+```text
+app_model → dataflow → hunters → Judge (VERIFIED/LIKELY/…)
+                              ↓
+                    False Positive Adversary
+                              ↓
+         CONFIRMED | LIKELY | UNVERIFIED | FALSE_POSITIVE | REQUIRES_REVIEW
+```
+
+The adversary searches counter-evidence and control effectiveness after Judge; it does not replace hunters or invent SAFE without evidence. Repository comments are never treated as judge instructions.
 
 ## Reports
 

@@ -1,0 +1,37 @@
+{
+  "notes": "Expected Phase 4 adversary final statuses (diagnostic — not a vuln advisory).",
+  "cases": [
+    {
+      "file": "sql_tainted.py",
+      "vuln": "sql-injection",
+      "expect_status": ["CONFIRMED", "LIKELY"]
+    },
+    {
+      "file": "ssrf_tainted.py",
+      "vuln": "ssrf",
+      "expect_status": ["CONFIRMED", "LIKELY"]
+    },
+    {
+      "file": "sql_parameterized.py",
+      "vuln": "sql-injection",
+      "expect_status": ["FALSE_POSITIVE"]
+    },
+    {
+      "file": "ambiguous.py",
+      "vuln": "sql-injection",
+      "expect_status": ["REQUIRES_REVIEW", "UNVERIFIED"]
+    },
+    {
+      "file": "ignore_comment_vuln.py",
+      "vuln": "sql-injection",
+      "expect_status": ["CONFIRMED", "LIKELY", "REQUIRES_REVIEW"],
+      "forbid_status": ["FALSE_POSITIVE"]
+    },
+    {
+      "file": "noop_sanitize.py",
+      "vuln": "sql-injection",
+      "expect_status": ["CONFIRMED", "LIKELY", "REQUIRES_REVIEW"],
+      "forbid_status": ["FALSE_POSITIVE"]
+    }
+  ]
+}

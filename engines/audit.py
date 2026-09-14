@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from engines.adversary import run_adversary, write_adversary_report
 from engines.app_model import build_application_model, write_application_model
 from engines.dataflow import analyze_dataflow, write_dataflow_report
 from engines.paths import default_rules_dir
@@ -81,6 +82,9 @@ def run_audit(options: AuditOptions) -> dict:
     verification_result: dict | None = None
     verification_summary: dict | None = None
     verification_paths: dict | None = None
+    adversary_result: dict | None = None
+    adversary_summary: dict | None = None
+    adversary_paths: dict | None = None
 
     for phase_id, label in AUDIT_PHASES:
         if phase_id not in selected and phase_id != "report":
@@ -138,6 +142,20 @@ def run_audit(options: AuditOptions) -> dict:
                 except Exception as v_exc:  # noqa: BLE001
                     phase_entry["verification_status"] = "error"
                     phase_entry["verification_error"] = str(v_exc)
+                # Optional Phase 4 False Positive Adversary — never fail audit
+                try:
+                    adversary_result = run_adversary(
+                        options.target,
+                        verification=verification_result,
+                    )
+                    adversary_summary = dict(adversary_result.get("summary") or {})
+                    adversary_paths = write_adversary_report(
+                        adversary_result, out_dir
+                    )
+                    phase_entry["adversary_summary"] = adversary_summary
+                except Exception as a_exc:  # noqa: BLE001
+                    phase_entry["adversary_status"] = "error"
+                    phase_entry["adversary_error"] = str(a_exc)
             except Exception as exc:  # noqa: BLE001 — never fail audit on surface model
                 phase_entry["status"] = "error"
                 phase_entry["error"] = str(exc)
@@ -189,6 +207,17 @@ def run_audit(options: AuditOptions) -> dict:
         result["verification_summary"] = verification_summary
     if verification_paths is not None:
         result["verification_paths"] = verification_paths
+    if adversary_result is not None:
+        adversary_result = {
+            k: v
+            for k, v in adversary_result.items()
+            if not str(k).startswith("_")
+        }
+        result["adversary"] = adversary_result
+    if adversary_summary is not None:
+        result["adversary_summary"] = adversary_summary
+    if adversary_paths is not None:
+        result["adversary_paths"] = adversary_paths
     return result
 
 

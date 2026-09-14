@@ -22,6 +22,8 @@ description: Triage AXguard findings — kill false positives, promote confirmed
 
 Drop anything that fails. Promote survivors with severity + evidence.
 
+When `.findings/axguard/adversary.json` is present (after Judge), prefer adversary **final** statuses (`CONFIRMED` / `LIKELY` / `UNVERIFIED` / `FALSE_POSITIVE` / `REQUIRES_REVIEW`) over raw Judge labels for Keep vs Drop.
+
 ## Output
 
 | Keep / Drop | ID | Severity | One-line reason |
