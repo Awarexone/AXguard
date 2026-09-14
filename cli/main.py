@@ -7,9 +7,11 @@ import sys
 from pathlib import Path
 
 from engines.app_model import build_application_model, write_application_model
+from engines.attack_graph import run_attack_graph, write_attack_graph_report
 from engines.audit import AuditOptions, run_audit
 from engines.banner import print_banner
 from engines.dataflow import analyze_dataflow, write_dataflow_report
+from engines.evidence import run_evidence, write_evidence_report
 from engines.paths import default_rules_dir
 from engines.report import render_report, write_reports
 from engines.scanner import ScanOptions, run_scan
@@ -106,6 +108,39 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-banner", action="store_true", help="Hide the ASCII banner"
     )
 
+    evidence = sub.add_parser(
+        "evidence",
+        help="Evidence & Confidence diagnostic (not a vuln report)",
+    )
+    evidence.add_argument(
+        "path", nargs="?", default=".", help="Target path (default: .)"
+    )
+    evidence.add_argument(
+        "--out-dir",
+        default=".findings/axguard",
+        help="Directory for evidence artifacts (default: .findings/axguard)",
+    )
+    evidence.add_argument(
+        "--no-banner", action="store_true", help="Hide the ASCII banner"
+    )
+
+    paths_cmd = sub.add_parser(
+        "paths",
+        aliases=["attack-paths"],
+        help="Attack graph + vulnerability chaining diagnostic (not a vuln report)",
+    )
+    paths_cmd.add_argument(
+        "path", nargs="?", default=".", help="Target path (default: .)"
+    )
+    paths_cmd.add_argument(
+        "--out-dir",
+        default=".findings/axguard",
+        help="Directory for attack-path artifacts (default: .findings/axguard)",
+    )
+    paths_cmd.add_argument(
+        "--no-banner", action="store_true", help="Hide the ASCII banner"
+    )
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
     return parser
@@ -122,6 +157,8 @@ AXguard — start with the workflow you need
   Dataflow / taint paths          axguard flow .    |  /axguard-flow
   Hunter → Judge verification     axguard verify .  |  /axguard-verify
   False Positive Adversary        axguard adversary .  |  /axguard-adversary
+  Evidence & Confidence engine    axguard evidence .  |  /axguard-evidence
+  Attack graph / vuln chaining    axguard paths .   |  /axguard-paths
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -189,6 +226,9 @@ def main(argv: list[str] | None = None) -> int:
         "flow",
         "verify",
         "adversary",
+        "evidence",
+        "paths",
+        "attack-paths",
     } and not getattr(args, "no_banner", False):
         print_banner()
         print()
@@ -263,6 +303,42 @@ def main(argv: list[str] | None = None) -> int:
                 f"UNVERIFIED={ads.get('UNVERIFIED', 0)} "
                 f"FALSE_POSITIVE={ads.get('FALSE_POSITIVE', 0)} "
                 f"REQUIRES_REVIEW={ads.get('REQUIRES_REVIEW', 0)}"
+            )
+        if result.get("evidence_paths"):
+            ep = result["evidence_paths"]
+            print(f"  evidence {ep.get('json')}")
+            print(f"  evidence {ep.get('markdown')}")
+        if result.get("evidence_summary"):
+            es = result["evidence_summary"]
+            ec = es.get("by_confidence") or {}
+            print(
+                "  evidence counts: "
+                f"findings={es.get('finding_count', 0)} "
+                f"unique={es.get('unique_evidence_count', 0)} "
+                f"reused={es.get('reused_evidence_count', 0)} "
+                f"conflicts={es.get('conflict_count', 0)} "
+                f"VERY_HIGH={ec.get('VERY_HIGH', 0)} "
+                f"HIGH={ec.get('HIGH', 0)} "
+                f"MEDIUM={ec.get('MEDIUM', 0)} "
+                f"LOW={ec.get('LOW', 0)} "
+                f"UNKNOWN={ec.get('UNKNOWN', 0)}"
+            )
+        if result.get("attack_graph_paths"):
+            agp = result["attack_graph_paths"]
+            print(f"  paths {agp.get('json')}")
+            print(f"  paths {agp.get('markdown')}")
+        if result.get("attack_graph_summary"):
+            ags = result["attack_graph_summary"]
+            bs = ags.get("by_status") or {}
+            print(
+                "  paths counts: "
+                f"paths={ags.get('path_count', 0)} "
+                f"CONFIRMED={bs.get('CONFIRMED', 0)} "
+                f"LIKELY={bs.get('LIKELY', 0)} "
+                f"UNVERIFIED={bs.get('UNVERIFIED', 0)} "
+                f"BLOCKED={bs.get('BLOCKED', 0)} "
+                f"INVALID={bs.get('INVALID', 0)} "
+                f"dead_ends={ags.get('dead_end_count', 0)}"
             )
         if args.open_summary:
             print()
@@ -367,8 +443,75 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  md               {paths['markdown']}")
         return 0
 
+    if args.command == "evidence":
+        target = Path(args.path).resolve()
+        if not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        out_dir = Path(args.out_dir)
+        ev_result = run_evidence(target)
+        paths = write_evidence_report(ev_result, out_dir)
+        summary = ev_result.get("summary") or {}
+        by_conf = summary.get("by_confidence") or {}
+        print("evidence & confidence complete (diagnostic — not a vuln report)")
+        print(f"  findings          {summary.get('finding_count', 0)}")
+        print(f"  unique evidence   {summary.get('unique_evidence_count', 0)}")
+        print(f"  reused evidence   {summary.get('reused_evidence_count', 0)}")
+        print(f"  conflicts         {summary.get('conflict_count', 0)}")
+        print(f"  unknowns          {summary.get('unknown_count', 0)}")
+        print(f"  VERY_HIGH         {by_conf.get('VERY_HIGH', 0)}")
+        print(f"  HIGH              {by_conf.get('HIGH', 0)}")
+        print(f"  MEDIUM            {by_conf.get('MEDIUM', 0)}")
+        print(f"  LOW               {by_conf.get('LOW', 0)}")
+        print(f"  UNKNOWN           {by_conf.get('UNKNOWN', 0)}")
+        print(f"  json              {paths['json']}")
+        print(f"  md                {paths['markdown']}")
+        return 0
+
+    if args.command in {"paths", "attack-paths"}:
+        target = Path(args.path).resolve()
+        if not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        out_dir = Path(args.out_dir)
+        ag_result = run_attack_graph(target)
+        paths = write_attack_graph_report(ag_result, out_dir)
+        summary = ag_result.get("summary") or {}
+        by_status = summary.get("by_status") or {}
+        print("attack graph complete (diagnostic — not a vuln report)")
+        print(f"  paths             {summary.get('path_count', 0)}")
+        print(f"  dead ends         {summary.get('dead_end_count', 0)}")
+        print(f"  CONFIRMED         {by_status.get('CONFIRMED', 0)}")
+        print(f"  LIKELY            {by_status.get('LIKELY', 0)}")
+        print(f"  UNVERIFIED        {by_status.get('UNVERIFIED', 0)}")
+        print(f"  BLOCKED           {by_status.get('BLOCKED', 0)}")
+        print(f"  INVALID           {by_status.get('INVALID', 0)}")
+        top = _top_attack_paths(ag_result, limit=5)
+        if top:
+            print("  top paths:")
+            for line in top:
+                for row in line:
+                    print(f"    {row}")
+        print(f"  json              {paths['json']}")
+        print(f"  md                {paths['markdown']}")
+        return 0
+
     parser.print_help()
     return 2
+
+
+def _top_attack_paths(result: dict, limit: int = 5) -> list[list[str]]:
+    """Render top paths as: 'Entry → Finding → … → Impact' + status/conf/score."""
+    graph = result.get("graph") or {}
+    labels = {n.get("id"): n.get("label") or n.get("id") for n in graph.get("nodes") or []}
+    out: list[list[str]] = []
+    for p in (result.get("paths") or [])[:limit]:
+        arrow = " → ".join(str(labels.get(h, h)) for h in p.get("hops") or [])
+        meta = f"{p.get('status')}/{p.get('confidence_level')}/score={p.get('score')}"
+        out.append([arrow, meta])
+    return out
 
 
 if __name__ == "__main__":

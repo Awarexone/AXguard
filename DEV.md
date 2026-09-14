@@ -63,8 +63,8 @@ Reports land in `.findings/axguard/` (gitignored).
 ## Repository map
 
 ```text
-cli/                CLI entrypoint (scan, audit, help, version)
-engines/            Scan orchestration, rule loader, reporters, banner
+cli/                CLI entrypoint (scan, audit, surface, flow, verify, adversary, evidence, paths, help, version)
+engines/            Scan orchestration, rule loader, reporters, banner, diagnostic engines (app_model/dataflow/verify/adversary/evidence/attack_graph)
 rules/              JSON rule packs (secrets, auth, injection, …)
 commands/           Slash commands installed into agent harnesses
 skills/             Agent Skills (SKILL.md)

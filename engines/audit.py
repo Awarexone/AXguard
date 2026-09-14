@@ -8,7 +8,9 @@ from pathlib import Path
 
 from engines.adversary import run_adversary, write_adversary_report
 from engines.app_model import build_application_model, write_application_model
+from engines.attack_graph import run_attack_graph, write_attack_graph_report
 from engines.dataflow import analyze_dataflow, write_dataflow_report
+from engines.evidence import run_evidence, write_evidence_report
 from engines.paths import default_rules_dir
 from engines.scanner import ScanOptions, run_scan
 from engines.verify import run_verification, write_verification_report
@@ -85,6 +87,12 @@ def run_audit(options: AuditOptions) -> dict:
     adversary_result: dict | None = None
     adversary_summary: dict | None = None
     adversary_paths: dict | None = None
+    evidence_result: dict | None = None
+    evidence_summary: dict | None = None
+    evidence_paths: dict | None = None
+    attack_graph_result: dict | None = None
+    attack_graph_summary: dict | None = None
+    attack_graph_paths: dict | None = None
 
     for phase_id, label in AUDIT_PHASES:
         if phase_id not in selected and phase_id != "report":
@@ -156,6 +164,40 @@ def run_audit(options: AuditOptions) -> dict:
                 except Exception as a_exc:  # noqa: BLE001
                     phase_entry["adversary_status"] = "error"
                     phase_entry["adversary_error"] = str(a_exc)
+                # Optional Phase 5 Evidence & Confidence — never fail audit
+                try:
+                    if adversary_result is not None:
+                        evidence_result = run_evidence(
+                            options.target,
+                            adversary=adversary_result,
+                        )
+                        evidence_summary = dict(
+                            evidence_result.get("summary") or {}
+                        )
+                        evidence_paths = write_evidence_report(
+                            evidence_result, out_dir
+                        )
+                        phase_entry["evidence_summary"] = evidence_summary
+                except Exception as e_exc:  # noqa: BLE001
+                    phase_entry["evidence_status"] = "error"
+                    phase_entry["evidence_error"] = str(e_exc)
+                # Optional Phase 6 Attack Graph — never fail audit on errors
+                try:
+                    if evidence_result is not None:
+                        attack_graph_result = run_attack_graph(
+                            options.target,
+                            evidence=evidence_result,
+                        )
+                        attack_graph_summary = dict(
+                            attack_graph_result.get("summary") or {}
+                        )
+                        attack_graph_paths = write_attack_graph_report(
+                            attack_graph_result, out_dir
+                        )
+                        phase_entry["attack_graph_summary"] = attack_graph_summary
+                except Exception as ag_exc:  # noqa: BLE001
+                    phase_entry["attack_graph_status"] = "error"
+                    phase_entry["attack_graph_error"] = str(ag_exc)
             except Exception as exc:  # noqa: BLE001 — never fail audit on surface model
                 phase_entry["status"] = "error"
                 phase_entry["error"] = str(exc)
@@ -218,6 +260,28 @@ def run_audit(options: AuditOptions) -> dict:
         result["adversary_summary"] = adversary_summary
     if adversary_paths is not None:
         result["adversary_paths"] = adversary_paths
+    if evidence_result is not None:
+        evidence_public = {
+            k: v
+            for k, v in evidence_result.items()
+            if not str(k).startswith("_")
+        }
+        result["evidence"] = evidence_public
+    if evidence_summary is not None:
+        result["evidence_summary"] = evidence_summary
+    if evidence_paths is not None:
+        result["evidence_paths"] = evidence_paths
+    if attack_graph_result is not None:
+        attack_graph_public = {
+            k: v
+            for k, v in attack_graph_result.items()
+            if not str(k).startswith("_")
+        }
+        result["attack_graph"] = attack_graph_public
+    if attack_graph_summary is not None:
+        result["attack_graph_summary"] = attack_graph_summary
+    if attack_graph_paths is not None:
+        result["attack_graph_paths"] = attack_graph_paths
     return result
 
 
