@@ -227,6 +227,14 @@ axguard audit .
 axguard audit . --fail-on high
 axguard scan . --format json -o out.json
 open .findings/axguard/axguard-report.html
+
+# Diagnostics (not vuln reports): surface → flow → verify → adversary → evidence → paths
+axguard surface .
+axguard flow .
+axguard verify .
+axguard adversary .
+axguard evidence .
+axguard paths .    # attack graph + vuln chaining (alias: axguard attack-paths .)
 ```
 
 ---

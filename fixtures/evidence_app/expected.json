@@ -1,0 +1,45 @@
+{
+  "notes": "Expected Phase 5 evidence & confidence outcomes (diagnostic — not a vuln advisory).",
+  "cases": [
+    {
+      "file": "sql_tainted.py",
+      "vuln": "sql-injection",
+      "expect_confidence": ["HIGH", "VERY_HIGH"],
+      "forbid_confidence": ["UNKNOWN"]
+    },
+    {
+      "file": "sql_parameterized.py",
+      "vuln": "sql-injection",
+      "expect_confidence": ["LOW", "UNKNOWN"],
+      "forbid_confidence": ["HIGH", "VERY_HIGH"],
+      "expect_false_positive": true
+    },
+    {
+      "file": "noop_sanitize.py",
+      "vuln": "sql-injection",
+      "expect_confidence": ["MEDIUM", "HIGH", "VERY_HIGH"],
+      "forbid_false_positive": true,
+      "expect_name_only_unknown": true
+    },
+    {
+      "file": "ambiguous.py",
+      "vuln": "sql-injection",
+      "expect_confidence": ["UNKNOWN", "LOW", "MEDIUM"],
+      "forbid_confidence": ["VERY_HIGH"],
+      "expect_unknowns": true,
+      "allow_no_candidates": true
+    },
+    {
+      "file": "ignore_comment_vuln.py",
+      "vuln": "sql-injection",
+      "expect_confidence": ["MEDIUM", "HIGH", "VERY_HIGH"],
+      "forbid_false_positive": true
+    },
+    {
+      "file": "conflict_case.py",
+      "vuln": "sql-injection",
+      "expect_conflict": true,
+      "expect_conflict_resolution": ["REQUIRES_REVIEW"]
+    }
+  ]
+}

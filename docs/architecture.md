@@ -6,7 +6,7 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 
 | Package / path | Responsibility |
 |---|---|
-| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `adversary`, `help`, `version` |
+| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `adversary`, `evidence`, `paths`, `help`, `version` |
 | `engines/scanner.py` | Orchestrates one scan pass |
 | `engines/rules_loader.py` | Loads `rules/*.json` (and a narrow YAML subset) |
 | `engines/source_scan.py` | Walks the tree, applies regex rules, builds findings |
@@ -15,6 +15,8 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 | `engines/dataflow/` | Source→sink taint paths over the app model (`axguard flow`) |
 | `engines/verify/` | Hunter → Judge verification diagnostic (`axguard verify`) |
 | `engines/adversary/` | False Positive Adversary — challenge Judge outcomes (`axguard adversary`) |
+| `engines/evidence/` | Evidence & Confidence engine — evidence graph + explainable confidence (`axguard evidence`) |
+| `engines/attack_graph/` | Attack Graph — chains Phase 1-5 findings into multi-hop attack paths (`axguard paths`) |
 | `engines/report.py` | text / json / markdown / HTML renderers + `write_reports` |
 | `engines/banner.py` | ASCII branding |
 | `engines/paths.py` | Resolves package root + default `rules/` |
@@ -63,9 +65,9 @@ sort by severity, then file/line
 
 ## Audit phases
 
-Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; it also soft-runs Phase 2 dataflow, Phase 3 Hunter→Judge verification, and Phase 4 False Positive Adversary (diagnostic artifacts only — never fails the audit). Other phases still structure findings by rule prefix.
+Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; it also soft-runs Phase 2 dataflow, Phase 3 Hunter→Judge verification, Phase 4 False Positive Adversary, Phase 5 Evidence & Confidence, and Phase 6 Attack Graph / vulnerability chaining (diagnostic artifacts only — never fails the audit). Other phases still structure findings by rule prefix.
 
-### Verification → Adversary pipeline
+### Hunter → Judge → Adversary → Evidence → Confidence → Attack Graph pipeline
 
 ```text
 app_model → dataflow → hunters → Judge (VERIFIED/LIKELY/…)
@@ -73,9 +75,22 @@ app_model → dataflow → hunters → Judge (VERIFIED/LIKELY/…)
                     False Positive Adversary
                               ↓
          CONFIRMED | LIKELY | UNVERIFIED | FALSE_POSITIVE | REQUIRES_REVIEW
+                              ↓
+                Evidence & Confidence engine
+        (supporting + counter evidence, dedupe/reuse, chains,
+         conflicts, quality → explainable confidence)
+                              ↓
+      VERY_HIGH | HIGH | MEDIUM | LOW | UNKNOWN   (+ unknowns / conflicts)
+                              ↓
+                 Attack Graph (composition layer)
+        (entrypoint → finding → … → asset; barriers → BLOCKED)
+                              ↓
+        CONFIRMED | LIKELY | UNVERIFIED | INVALID | BLOCKED  (per path)
 ```
 
-The adversary searches counter-evidence and control effectiveness after Judge; it does not replace hunters or invent SAFE without evidence. Repository comments are never treated as judge instructions.
+The adversary searches counter-evidence and control effectiveness after Judge; it does not replace hunters or invent SAFE without evidence. The evidence engine then builds a deduplicated evidence graph per finding and derives an **explainable** confidence: quality is scored from provenance + exact location + analysis strength (never an arbitrary LLM percentage), unknowns pull confidence down, and a single strong signal never hides a critical unknown. Repository comments are never treated as evidence of safety, name-only controls never raise confidence, and the LLM stub can only explain existing evidence — it never invents any.
+
+The attack graph is a **composition layer** on top: it chains individual findings into multi-hop attack paths (`entrypoint → … → sensitive outcome`) and reuses the same confidence vocabulary (Phase 5 `confidence_level` for `path.confidence_level`; legacy `confirmed|likely|unknown` per hop/edge). A path's status is its weakest hop plus barrier state — an **effective** control (fails-closed crypto auth) on a required edge marks the *path* `BLOCKED` (the finding still stands standalone); a `FALSE_POSITIVE` hop or a co-location-only link is `INVALID`; unknown reachability is `UNVERIFIED`, never a public claim. Where the upstream hunters miss a pattern, the attack graph emits its own deterministic, evidence-gated `candidate_seed` nodes (`LIKELY` at best, never `CONFIRMED`), and its LLM stub is inert (`invent()` raises).
 
 ## Reports
 

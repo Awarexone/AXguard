@@ -82,6 +82,14 @@ def render_markdown(result: dict) -> str:
             ]
         )
 
+    ev_lines = _evidence_markdown_section(result)
+    if ev_lines:
+        lines.extend(ev_lines)
+
+    ap_lines = _attack_paths_markdown_section(result)
+    if ap_lines:
+        lines.extend(ap_lines)
+
     lines.extend(["## Findings", ""])
     if not findings:
         lines.append("No findings.")
@@ -107,6 +115,94 @@ def render_markdown(result: dict) -> str:
     return "\n".join(lines)
 
 
+def _top_evidence_entries(result: dict, limit: int = 5) -> list[dict]:
+    evidence = result.get("evidence") or {}
+    entries = evidence.get("findings_evidence") or []
+    order = {"VERY_HIGH": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
+    ranked = sorted(
+        entries,
+        key=lambda e: (order.get(str(e.get("confidence_level")), 9), str(e.get("finding_id"))),
+    )
+    # Prioritise the confident, actionable findings for a short section.
+    top = [e for e in ranked if str(e.get("confidence_level")) in {"VERY_HIGH", "HIGH", "MEDIUM"}]
+    return (top or ranked)[:limit]
+
+
+def _evidence_markdown_section(result: dict) -> list[str]:
+    summary = result.get("evidence_summary") or (result.get("evidence") or {}).get("summary")
+    if not summary:
+        return []
+    by_conf = summary.get("by_confidence") or {}
+    lines = [
+        "## Evidence & confidence",
+        "",
+        f"- Findings with evidence: {summary.get('finding_count', 0)} "
+        f"(unique evidence {summary.get('unique_evidence_count', 0)}, "
+        f"reused {summary.get('reused_evidence_count', 0)})",
+        f"- Confidence: VERY_HIGH {by_conf.get('VERY_HIGH', 0)} · "
+        f"HIGH {by_conf.get('HIGH', 0)} · MEDIUM {by_conf.get('MEDIUM', 0)} · "
+        f"LOW {by_conf.get('LOW', 0)} · UNKNOWN {by_conf.get('UNKNOWN', 0)}",
+        f"- Conflicts: {summary.get('conflict_count', 0)} · "
+        f"Unknowns: {summary.get('unknown_count', 0)}",
+        "",
+    ]
+    top = _top_evidence_entries(result)
+    if top:
+        lines.append("Top findings by confidence:")
+        lines.append("")
+        for e in top:
+            loc = e.get("location") or {}
+            lines.append(
+                f"- **{e.get('confidence_level')}** "
+                f"`{e.get('vulnerability_type')}` [{e.get('status')}] "
+                f"@ `{loc.get('file')}:{loc.get('line')}` — {e.get('summary')}"
+            )
+        lines.append("")
+    return lines
+
+
+def _attack_graph(result: dict) -> dict:
+    return result.get("attack_graph") or {}
+
+
+def _top_attack_paths(result: dict, limit: int = 5) -> list[dict]:
+    paths = _attack_graph(result).get("paths") or []
+    return paths[:limit]
+
+
+def _attack_path_arrow(result: dict, path: dict) -> str:
+    graph = _attack_graph(result).get("graph") or {}
+    labels = {n.get("id"): n.get("label") or n.get("id") for n in graph.get("nodes") or []}
+    return " → ".join(str(labels.get(h, h)) for h in path.get("hops") or [])
+
+
+def _attack_paths_markdown_section(result: dict) -> list[str]:
+    summary = result.get("attack_graph_summary") or _attack_graph(result).get("summary")
+    if not summary:
+        return []
+    by_status = summary.get("by_status") or {}
+    lines = [
+        "## Attack paths",
+        "",
+        f"- Paths: {summary.get('path_count', 0)} · Dead ends: {summary.get('dead_end_count', 0)}",
+        f"- Status: CONFIRMED {by_status.get('CONFIRMED', 0)} · "
+        f"LIKELY {by_status.get('LIKELY', 0)} · UNVERIFIED {by_status.get('UNVERIFIED', 0)} · "
+        f"BLOCKED {by_status.get('BLOCKED', 0)} · INVALID {by_status.get('INVALID', 0)}",
+        "",
+    ]
+    top = _top_attack_paths(result)
+    if top:
+        lines.append("Top paths (entry → … → impact):")
+        lines.append("")
+        for p in top:
+            lines.append(
+                f"- **{p.get('status')}** (confidence {p.get('confidence_level')}, "
+                f"score {p.get('score')}) — `{_attack_path_arrow(result, p)}`"
+            )
+        lines.append("")
+    return lines
+
+
 def render_html(result: dict) -> str:
     findings = result.get("findings", [])
     counts = result.get("severity_counts") or _counts(findings)
@@ -130,6 +226,9 @@ def render_html(result: dict) -> str:
             for p in result["phases"]
         )
         phases_html = f'<section class="phases"><h2>Audit phases</h2><ol>{items}</ol></section>'
+
+    evidence_html = _evidence_html_section(result)
+    attack_paths_html = _attack_paths_html_section(result)
 
     if findings:
         finding_blocks = []
@@ -369,6 +468,8 @@ footer {{
 
     <div class="cards">{cards}</div>
     {phases_html}
+    {evidence_html}
+    {attack_paths_html}
     <section>
       <h2>Findings</h2>
       {findings_html}
@@ -378,6 +479,74 @@ footer {{
 </body>
 </html>
 """
+
+
+def _evidence_html_section(result: dict) -> str:
+    summary = result.get("evidence_summary") or (result.get("evidence") or {}).get("summary")
+    if not summary:
+        return ""
+    by_conf = summary.get("by_confidence") or {}
+    meta = (
+        f"VERY_HIGH {by_conf.get('VERY_HIGH', 0)} · HIGH {by_conf.get('HIGH', 0)} · "
+        f"MEDIUM {by_conf.get('MEDIUM', 0)} · LOW {by_conf.get('LOW', 0)} · "
+        f"UNKNOWN {by_conf.get('UNKNOWN', 0)}"
+    )
+    rows = []
+    for e in _top_evidence_entries(result):
+        loc = e.get("location") or {}
+        rows.append(
+            "<li><span class='badge'>"
+            + html.escape(str(e.get("confidence_level")))
+            + "</span> <code>"
+            + html.escape(str(e.get("vulnerability_type")))
+            + "</code> ["
+            + html.escape(str(e.get("status")))
+            + "] <code>"
+            + html.escape(f"{loc.get('file')}:{loc.get('line')}")
+            + "</code> — "
+            + html.escape(str(e.get("summary") or ""))
+            + "</li>"
+        )
+    top_html = f"<ol>{''.join(rows)}</ol>" if rows else ""
+    return (
+        '<section class="evidence"><h2>Evidence &amp; confidence</h2>'
+        f"<p class='meta'>Findings {summary.get('finding_count', 0)} · unique evidence "
+        f"{summary.get('unique_evidence_count', 0)} · reused {summary.get('reused_evidence_count', 0)} · "
+        f"conflicts {summary.get('conflict_count', 0)}</p>"
+        f"<p class='meta'>{html.escape(meta)}</p>"
+        f"{top_html}</section>"
+    )
+
+
+def _attack_paths_html_section(result: dict) -> str:
+    summary = result.get("attack_graph_summary") or _attack_graph(result).get("summary")
+    if not summary:
+        return ""
+    by_status = summary.get("by_status") or {}
+    meta = (
+        f"CONFIRMED {by_status.get('CONFIRMED', 0)} · LIKELY {by_status.get('LIKELY', 0)} · "
+        f"UNVERIFIED {by_status.get('UNVERIFIED', 0)} · BLOCKED {by_status.get('BLOCKED', 0)} · "
+        f"INVALID {by_status.get('INVALID', 0)}"
+    )
+    rows = []
+    for p in _top_attack_paths(result):
+        rows.append(
+            "<li><span class='badge'>"
+            + html.escape(str(p.get("status")))
+            + "</span> "
+            + html.escape(f"conf {p.get('confidence_level')} · score {p.get('score')}")
+            + " — <code>"
+            + html.escape(_attack_path_arrow(result, p))
+            + "</code></li>"
+        )
+    top_html = f"<ol>{''.join(rows)}</ol>" if rows else ""
+    return (
+        '<section class="attack-paths"><h2>Attack paths</h2>'
+        f"<p class='meta'>Paths {summary.get('path_count', 0)} · dead ends "
+        f"{summary.get('dead_end_count', 0)}</p>"
+        f"<p class='meta'>{html.escape(meta)}</p>"
+        f"{top_html}</section>"
+    )
 
 
 def _text_report(result: dict) -> str:

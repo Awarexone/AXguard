@@ -19,7 +19,7 @@ SKILLS=(
   security-triage security-remediation
 )
 COMMANDS=(
-  axguard-audit.md axguard-scan.md axguard-surface.md axguard-flow.md axguard-verify.md axguard-adversary.md axguard-secrets.md axguard-auth.md
+  axguard-audit.md axguard-scan.md axguard-surface.md axguard-flow.md axguard-verify.md axguard-adversary.md axguard-evidence.md axguard-paths.md axguard-secrets.md axguard-auth.md
   axguard-inject.md axguard-ssrf.md axguard-xss.md axguard-cloud.md
   axguard-agent.md axguard-sql.md axguard-ssti.md axguard-path.md
   axguard-crypto.md axguard-supply.md axguard-graphql.md axguard-upload.md
