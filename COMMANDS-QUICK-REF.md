@@ -6,6 +6,7 @@
 |---|---|
 | Full pre-ship audit + HTML/MD | `/axguard-audit` |
 | Fast scan | `/axguard-scan` |
+| Map app / attack surface | `/axguard-surface` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
 | Auth / IDOR | `/axguard-auth` |
@@ -30,7 +31,7 @@
 ## Default pipeline
 
 ```text
-/axguard-threat-model → /axguard-audit → /axguard-triage → /axguard-fix → /axguard-report → /axguard-ci
+/axguard-surface → /axguard-threat-model → /axguard-audit → /axguard-triage → /axguard-fix → /axguard-report → /axguard-ci
 ```
 
 ## Report paths
@@ -38,6 +39,8 @@
 ```
 .findings/axguard/axguard-report.html
 .findings/axguard/axguard-report.md
+.findings/axguard/application-model.json
+.findings/axguard/application-model.md
 .findings/axguard/axguard-report.json
 ```
 

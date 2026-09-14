@@ -19,7 +19,7 @@ frameworks:
   nist_csf: []
   nist_ai_rmf: []
 related_skills: [threat-modeling, security-architecture-review, api-security, security-triage]
-related_commands: [/axguard-threat-model, /axguard-audit, /axguard-scan, /axguard-cso]
+related_commands: [/axguard-threat-model, /axguard-surface, /axguard-audit, /axguard-scan, /axguard-cso]
 related_rules: []
 references:
   - https://owasp.org/Top10/A04_2021-Insecure_Design/
@@ -56,14 +56,15 @@ Mapping itself is not a vuln. It identifies where attackers interact: anonymous 
 
 ## Analysis Workflow
 
-1. **Identify exposure**: web routes, GraphQL, WS, gRPC, webhooks, mobile BFF, admin panels, debug/actuators.
-2. **List trust inputs**: params, headers, files, messages, env-injected dynamic config, model/tool outputs.
-3. **Map identities**: anonymous, user, admin, service, CI.
-4. **Note data stores & egress**: DB, object storage, email, outbound HTTP (SSRF candidates), cloud metadata.
-5. **Flag high-risk features**: auth, payments, uploads, HTML render, template editors, deserializers, shell-outs, agents.
-6. **Diff inventory vs docs/OpenAPI** — mark undocumented/shadow routes.
-7. **Prioritize** top surfaces → assign AXGuard commands/skills (`/axguard-auth`, `ssrf-analysis`, etc.).
-8. Hand off to `threat-modeling` (abuse cases) and `axguard audit` (detection).
+1. **Prefer CLI when available**: run `axguard surface <path>` (or rely on the audit `surface` phase via `axguard audit`) to get `application-model.json` / `.md` before manual inventory.
+2. **Identify exposure**: web routes, GraphQL, WS, gRPC, webhooks, mobile BFF, admin panels, debug/actuators.
+3. **List trust inputs**: params, headers, files, messages, env-injected dynamic config, model/tool outputs.
+4. **Map identities**: anonymous, user, admin, service, CI.
+5. **Note data stores & egress**: DB, object storage, email, outbound HTTP (SSRF candidates), cloud metadata.
+6. **Flag high-risk features**: auth, payments, uploads, HTML render, template editors, deserializers, shell-outs, agents.
+7. **Diff inventory vs docs/OpenAPI** — mark undocumented/shadow routes.
+8. **Prioritize** top surfaces → assign AXGuard commands/skills (`/axguard-auth`, `ssrf-analysis`, etc.).
+9. Hand off to `threat-modeling` (abuse cases) and `axguard audit` (detection).
 
 ## Evidence Requirements
 
@@ -86,7 +87,7 @@ Inventory gaps become engineering work: remove shadow APIs, document OpenAPI, di
 ## Verification
 
 ```text
-Build surface list → Confirm against routes/deploy config → Feed /axguard-audit → Update map when features change
+axguard surface <path> (or audit surface phase) → Confirm against routes/deploy config → Feed /axguard-audit → Update map when features change
 ```
 
 ## Related Skills

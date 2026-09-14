@@ -6,6 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from engines.app_model import build_application_model, write_application_model
 from engines.audit import AuditOptions, run_audit
 from engines.banner import print_banner
 from engines.paths import default_rules_dir
@@ -50,6 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     audit.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
 
+    surface = sub.add_parser(
+        "surface",
+        help="Build application understanding model (routes, sinks, stack)",
+    )
+    surface.add_argument("path", nargs="?", default=".", help="Target path (default: .)")
+    surface.add_argument(
+        "--out-dir",
+        default=".findings/axguard",
+        help="Directory for application-model artifacts (default: .findings/axguard)",
+    )
+    surface.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
     return parser
@@ -62,6 +75,7 @@ AXguard — start with the workflow you need
   -----------------------------   -------------------------
   About to publish / open a PR    axguard audit .   |  /axguard-audit
   Quick check while coding        axguard scan .    |  /axguard-scan
+  Map attack surface / app model  axguard surface . |  /axguard-surface
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -122,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
         print(HELP_TEXT)
         return 0
 
-    if args.command in {"scan", "audit"} and not getattr(args, "no_banner", False):
+    if args.command in {"scan", "audit", "surface"} and not getattr(args, "no_banner", False):
         print_banner()
         print()
 
@@ -160,10 +174,40 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  json  {paths['json']}")
         print(f"  md    {paths['md']}")
         print(f"  html  {paths['html']}")
+        if result.get("application_model_paths"):
+            amp = result["application_model_paths"]
+            print(f"  model {amp.get('json')}")
+            print(f"  model {amp.get('markdown')}")
         if args.open_summary:
             print()
             print(render_report(result, "md"))
         return 1 if _should_fail(result["findings"], args.fail_on) else 0
+
+    if args.command == "surface":
+        target = Path(args.path).resolve()
+        if not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        out_dir = Path(args.out_dir)
+        model = build_application_model(target)
+        paths = write_application_model(model, out_dir)
+        summary = model.get("summary") or {}
+        langs = [
+            x.get("name") if isinstance(x, dict) else x
+            for x in (model.get("application") or {}).get("languages") or []
+        ]
+        frameworks = summary.get("frameworks") or []
+        print("application understanding complete")
+        print(f"  endpoints   {summary.get('endpoint_count', 0)}")
+        print(f"  sinks       {summary.get('sink_count', 0)}")
+        print(f"  externals   {summary.get('external_service_count', 0)}")
+        print(f"  AI comps    {summary.get('ai_component_count', 0)}")
+        print(f"  languages   {', '.join(str(x) for x in langs) or 'unknown'}")
+        print(f"  frameworks  {', '.join(str(x) for x in frameworks) or 'unknown'}")
+        print(f"  json        {paths['json']}")
+        print(f"  md          {paths['markdown']}")
+        return 0
 
     parser.print_help()
     return 2

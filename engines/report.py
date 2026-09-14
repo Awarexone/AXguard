@@ -63,6 +63,25 @@ def render_markdown(result: dict) -> str:
             )
         lines.append("")
 
+    summary = result.get("application_model_summary")
+    if summary is None and isinstance(result.get("application_model"), dict):
+        summary = (result["application_model"] or {}).get("summary")
+    if summary:
+        frameworks = summary.get("frameworks") or []
+        fw_text = ", ".join(str(x) for x in frameworks) if frameworks else "unknown"
+        lines.extend(
+            [
+                "## Application understanding",
+                "",
+                f"- Endpoints: {summary.get('endpoint_count', 0)}",
+                f"- Frameworks: {fw_text}",
+                f"- Sinks: {summary.get('sink_count', 0)}",
+                f"- External services: {summary.get('external_service_count', 0)}",
+                f"- AI components: {summary.get('ai_component_count', 0)}",
+                "",
+            ]
+        )
+
     lines.extend(["## Findings", ""])
     if not findings:
         lines.append("No findings.")
