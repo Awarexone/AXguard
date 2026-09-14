@@ -103,6 +103,16 @@ The attack graph is a **composition layer** on top: it chains individual finding
 
 `write_reports` always writes all three file artifacts for `audit`.
 
+### HTML report approval / consent model
+
+The HTML report (`render_html` + `engines/report_ux.py`) is **read-only** and self-contained: no network calls, no source mutation, secrets already `[REDACTED]` upstream. It applies the AXguard consent principle — *analyze automatically, but ask before actions that create / export / expose / run heavier secondary analysis; never nag for harmless read-only ops*:
+
+- **AUTO** (no dialog) — parse, path composition, evidence, and generating the report already ran server-side. A top banner states the mode (`READ-ONLY`), target, generated time, coverage, and "No source files were modified. No external requests were made." If advanced stages are missing it shows `LIMITED ANALYSIS` + a *Review Available Analysis* jump.
+- **APPROVAL REQUIRED** (Approve / Cancel dialog) — expand the full attack graph, reveal full source context, export a detailed report, or run the extended-analysis placeholder. All effects are client-side. Expanding a large graph (> `FULL_GRAPH_EDGE_THRESHOLD` edges or `> FULL_GRAPH_PATH_THRESHOLD` paths) asks one extra "Load full attack graph?" approval.
+- **HIGH-RISK** (dialog, then stubbed) — Apply Fix / Active Verification / External Share open a dialog and are **never executed** by the report; approving only records a `BLOCKED` "not available in this report build (requires CLI)" outcome.
+
+State lives in an embedded `#axguard-session-state` script (`{"analysis_mode":"read_only","approved_actions":[],"activity_log":[]}`): scoped, temporary, auditable — one approval never implies another. Every action button routes through `axguardRequestApproval(...)`; there is no direct runner `onclick`. Interactive actions surface states (`AVAILABLE → WAITING FOR APPROVAL → RUNNING → COMPLETED / BLOCKED / FAILED / CANCELLED`), an *Analysis activity* trail logs approvals/expansions/exports (no secrets), and there are no dark patterns: Cancel is always present, Escape and the backdrop cancel, focus defaults to Cancel, and no dangerous action is preselected or auto-run. Detailed attack-path hops are read from an embedded `#axguard-attack-paths` `application/json` block (redacted via `ensure_no_secret_values`).
+
 ## Extensibility points
 
 1. **New regex pack** — drop JSON in `rules/` (see [adding-rules.md](adding-rules.md))

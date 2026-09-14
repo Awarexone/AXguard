@@ -237,6 +237,12 @@ axguard evidence .
 axguard paths .    # attack graph + vuln chaining (alias: axguard attack-paths .)
 ```
 
+On top of `axguard paths`, `engines/attack_graph/aggregate.py` and
+`engines/attack_graph/posture.py` add optional, importable rollups (risk
+aggregation grouped by root cause/asset/privilege/tenant, and an
+`Entry → Trust → Controls → Weak → Vulns → Priv → Assets → Impact` posture
+summary) — see [`commands/axguard-paths.md`](commands/axguard-paths.md).
+
 ---
 
 ## What it finds

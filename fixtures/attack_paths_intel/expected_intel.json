@@ -1,0 +1,61 @@
+{
+  "notes": "Phase 6 Part 2 intelligence-layer expectations (diagnostic, not a vuln advisory). Covers single-request chaining honesty (cases[]), temporal multi-step detection, and what-if counterfactual baselines. Statuses follow docs/attack-graph.md; Predictive/Hypothetical artifacts are NEVER current vulnerabilities.",
+  "cases": [
+    {
+      "file": "confused_deputy.py",
+      "chain": "public proxy fetch -> confused deputy / ssrf -> internal token store",
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "notes": "Server fetches an attacker-named URL with its own trusted network position; internal token endpoint is reachable server-side with no enforced boundary."
+    },
+    {
+      "file": "adversarial_false_relation.py",
+      "chain": "reflected-xss (/profile/preview) and open-redirect (/go) — same file, unrelated",
+      "expect_path_exists": false,
+      "expect_status": [],
+      "forbid_status": ["CONFIRMED", "LIKELY", "UNVERIFIED"],
+      "notes": "Adversarial bait: no shared data/control flow. Must NOT be chained; two standalone dead-end findings are the correct outcome."
+    },
+    {
+      "file": "temporal_chain.py",
+      "chain": "register -> verify -> reset lifecycle (temporal, not a single-request chain)",
+      "expect_path_exists": false,
+      "expect_status": [],
+      "forbid_status": ["CONFIRMED"],
+      "notes": "The lifecycle is a temporal chain (see temporal[]); single-request attack-path composition should NOT fabricate a hop chain across these independent requests."
+    }
+  ],
+  "temporal": [
+    {
+      "sequence_name": "account_recovery",
+      "file": "temporal_chain.py",
+      "expect_status": ["LIKELY"],
+      "expect_steps": ["register", "verify", "reset"],
+      "notes": "Steps co-locate in one module in the expected order → LIKELY, never CONFIRMED."
+    }
+  ],
+  "whatif_baseline": {
+    "notes": "Every what-if scenario output MUST be hypothetical:true and status PREDICTIVE — never presented as a current vulnerability.",
+    "target": "attack_paths_intel",
+    "scenarios": {
+      "unrestricted_egress": {
+        "expect_hypothetical": true,
+        "expect_status": "PREDICTIVE",
+        "expect_min_paths": 1,
+        "notes": "confused_deputy exposes a credential asset + SSRF pivot, so an unrestricted-egress counterfactual should predict an exfiltration path."
+      },
+      "secret_leaks": {
+        "expect_hypothetical": true,
+        "expect_status": "PREDICTIVE",
+        "expect_min_paths": 1
+      },
+      "remove_authz": {
+        "expect_hypothetical": true,
+        "expect_status": "PREDICTIVE",
+        "expect_min_paths": 0,
+        "notes": "May be 0 if no effective control is present to remove — the engine must NOT fabricate one."
+      }
+    }
+  }
+}

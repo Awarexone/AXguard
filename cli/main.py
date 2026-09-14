@@ -140,6 +140,65 @@ def build_parser() -> argparse.ArgumentParser:
     paths_cmd.add_argument(
         "--no-banner", action="store_true", help="Hide the ASCII banner"
     )
+    # Phase 6 Part 2 — attack-path intelligence view filters (display only; the
+    # written attack-paths.json always contains the full, unfiltered path set).
+    paths_cmd.add_argument(
+        "--mode",
+        choices=("CONFIRMED_ONLY", "CONFIRMED_AND_LIKELY", "INCLUDE_UNKNOWN"),
+        default=None,
+        help="Search mode: which path statuses count as live (default: INCLUDE_UNKNOWN)",
+    )
+    paths_cmd.add_argument(
+        "--current",
+        action="store_true",
+        help="Show only currently-exploitable paths (CONFIRMED/LIKELY, not blocked)",
+    )
+    paths_cmd.add_argument(
+        "--blocked",
+        action="store_true",
+        help="Show only paths blocked by an effective control",
+    )
+    paths_cmd.add_argument(
+        "--unknown",
+        action="store_true",
+        help="Show only UNVERIFIED paths (unknown reachability/link — for review)",
+    )
+    paths_cmd.add_argument(
+        "--critical",
+        action="store_true",
+        help="Show only paths reaching high-sensitivity assets (PII and above)",
+    )
+    paths_cmd.add_argument(
+        "--shortest",
+        action="store_true",
+        help="Show only the shortest-credible path per (entry, target)",
+    )
+    # --- Phase 6 Part2 predictive ---
+    # Advanced-analysis hooks (self-contained modules; never claim current vulns).
+    paths_cmd.add_argument(
+        "--predictive",
+        action="store_true",
+        help="Emit predictive risk / attack-surface signals (Predictive, not findings)",
+    )
+    paths_cmd.add_argument(
+        "--diff",
+        nargs=2,
+        metavar=("PATH_A", "PATH_B"),
+        default=None,
+        help="Diff two attack-paths.json files (before after) and print changes",
+    )
+    paths_cmd.add_argument(
+        "--what-if",
+        dest="what_if",
+        metavar="SCENARIO",
+        default=None,
+        help=(
+            "Run a counterfactual scenario against the current graph "
+            "(remove_authz | publicize_endpoint | unrestricted_egress | "
+            "ai_tool_gains_fs | tenant_isolation_weakened | secret_leaks)"
+        ),
+    )
+    # --- end Phase 6 Part2 predictive ---
 
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
@@ -476,10 +535,28 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         out_dir = Path(args.out_dir)
-        ag_result = run_attack_graph(target)
+
+        # --- Phase 6 Part2 predictive ---
+        # `--diff` compares two saved attack-paths.json files and needs no run.
+        if getattr(args, "diff", None):
+            from engines.attack_graph import diff as ag_diff
+
+            a_path, b_path = args.diff
+            comparison = ag_diff.compare_attack_graphs(a_path, b_path)
+            print(ag_diff.render_diff_markdown(comparison))
+            return 0
+        # --- end Phase 6 Part2 predictive ---
+
+        mode = getattr(args, "mode", None)
+        ag_result = (
+            run_attack_graph(target, search_mode=mode)
+            if mode
+            else run_attack_graph(target)
+        )
         paths = write_attack_graph_report(ag_result, out_dir)
         summary = ag_result.get("summary") or {}
         by_status = summary.get("by_status") or {}
+        posture = ag_result.get("posture") or {}
         print("attack graph complete (diagnostic — not a vuln report)")
         print(f"  paths             {summary.get('path_count', 0)}")
         print(f"  dead ends         {summary.get('dead_end_count', 0)}")
@@ -488,18 +565,108 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  UNVERIFIED        {by_status.get('UNVERIFIED', 0)}")
         print(f"  BLOCKED           {by_status.get('BLOCKED', 0)}")
         print(f"  INVALID           {by_status.get('INVALID', 0)}")
-        top = _top_attack_paths(ag_result, limit=5)
+        print(f"  search mode       {ag_result.get('search_mode')}")
+        print(f"  max sensitivity   {posture.get('max_sensitivity_reachable', 'UNKNOWN')}")
+        print(
+            "  privilege         "
+            f"{posture.get('privilege_pattern_counts') or {}}"
+        )
+        filtered = _filter_attack_paths(ag_result, args)
+        label = _attack_path_filter_label(args)
+        top = _top_attack_paths({"graph": ag_result.get("graph"), "paths": filtered}, limit=8)
         if top:
-            print("  top paths:")
+            print(f"  top paths{label}:")
             for line in top:
                 for row in line:
                     print(f"    {row}")
+        elif label:
+            print(f"  top paths{label}: (none matched)")
         print(f"  json              {paths['json']}")
         print(f"  md                {paths['markdown']}")
+
+        # --- Phase 6 Part2 predictive ---
+        if getattr(args, "what_if", None):
+            from engines.attack_graph import whatif as ag_whatif
+
+            try:
+                whatif_result = ag_whatif.run_what_if(ag_result, args.what_if)
+            except KeyError:
+                print(
+                    "  what-if: unknown scenario "
+                    f"{args.what_if!r}; valid: {ag_whatif.available_scenarios()}",
+                    file=sys.stderr,
+                )
+                return 2
+            print(
+                f"  what-if [{whatif_result['scenario']}] "
+                f"({whatif_result['status']}, {whatif_result['hypothetical_path_count']} hypothetical):"
+            )
+            nbi = {n.get("id"): n for n in (ag_result.get("graph") or {}).get("nodes") or []}
+            for hp in whatif_result["hypothetical_paths"]:
+                labels = hp.get("hop_labels") or [
+                    str((nbi.get(h) or {}).get("label", h)) for h in hp.get("hops") or []
+                ]
+                print(f"    - {hp['id']}: {' → '.join(str(x) for x in labels)}")
+                print(f"      premise: {hp['premise']}")
+            if whatif_result.get("note"):
+                print(f"    ({whatif_result['note']})")
+
+        if getattr(args, "predictive", False):
+            from engines.attack_graph import predictive as ag_predictive
+
+            report = ag_predictive.surface_report(ag_result)
+            print(f"  predictive surface ({report['status']}):")
+            for sig in report.get("signals") or []:
+                print(f"    - [{sig['direction']}] {sig['language']}: {sig['signal']}")
+            if not report.get("signals"):
+                print("    (no emerging-surface signals on this target)")
+        # --- end Phase 6 Part2 predictive ---
         return 0
 
     parser.print_help()
     return 2
+
+
+def _filter_attack_paths(result: dict, args: argparse.Namespace) -> list[dict]:
+    """Apply the Part 2 view filters (``--current/--blocked/--unknown/--critical
+    /--shortest/--mode``) to the enumerated paths. Display only — the written
+    ``attack-paths.json`` is never filtered.
+    """
+    from engines.attack_graph import api as ag_api
+    from engines.attack_graph import modes as ag_modes
+
+    paths = list(result.get("paths") or [])
+    mode = getattr(args, "mode", None)
+    if mode:
+        paths = ag_modes.filter_paths(paths, mode)
+
+    if getattr(args, "current", False):
+        paths = [p for p in paths if str(p.get("status")) in {"CONFIRMED", "LIKELY"}]
+    if getattr(args, "blocked", False):
+        paths = [p for p in paths if str(p.get("status")) == "BLOCKED"]
+    if getattr(args, "unknown", False):
+        paths = [p for p in paths if str(p.get("status")) == "UNVERIFIED"]
+    if getattr(args, "shortest", False):
+        paths = [p for p in paths if "shortest_credible" in (p.get("selection") or [])]
+    if getattr(args, "critical", False):
+        crit: list[dict] = []
+        for p in paths:
+            sens = ag_api.analyze_path_sensitivity(result, str(p.get("id")))
+            if sens.get("max_impact_weight", 0.0) >= 0.75:
+                crit.append(p)
+        paths = crit
+    return paths
+
+
+def _attack_path_filter_label(args: argparse.Namespace) -> str:
+    active = [
+        name
+        for name in ("current", "blocked", "unknown", "critical", "shortest")
+        if getattr(args, name, False)
+    ]
+    if getattr(args, "mode", None):
+        active.append(f"mode={args.mode}")
+    return f" [{', '.join(active)}]" if active else ""
 
 
 def _top_attack_paths(result: dict, limit: int = 5) -> list[list[str]]:

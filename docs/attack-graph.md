@@ -302,3 +302,252 @@ engines/attack_graph/
   writers.py        attack-paths.json + attack-paths.md
   pipeline.py       run_attack_graph(target, evidence=None)
 ```
+
+---
+
+# Attack Graph — Phase 6 **Part 2** Foundation (implemented)
+
+> **Status:** implemented. Part 2 is an *intelligence* layer built **over** the
+> Part 1 chains — it does not rewrite them. Part 1 still assembles the
+> evidence-backed `graph` + `paths[]`; Part 2 reasons about *who* the attacker
+> becomes, *what state* the app moves through, *how privilege shifts*, *how
+> sensitive* the reached data is, *what one compromise exposes* (blast radius),
+> *what one fix removes* (fix impact), and *which paths are really the same bug*
+> (equivalence). It adds new result fields and a public query `api`, and adds
+> optional view filters to `axguard paths`. **Same one confidence system,
+> reused** — Part 2 invents no second confidence scale and no second
+> evidence-weight table, and every derived record is anchored to evidence that
+> already exists on a node/edge.
+
+## What Part 2 adds (at a glance)
+
+| Concern | Module | Public entry (`engines.attack_graph.api`) |
+|---|---|---|
+| Bounded, deterministic graph search | `search.py` | (used internally by blast/reachability) |
+| AND/OR three-valued precondition logic | `logic.py` | — |
+| Identity types + transitions | `identity.py` | `get_path_identities`, `get_identity_transitions` |
+| Application states + transitions | `state_model.py` | `get_path_state`, `get_state_transitions` |
+| Privilege transitions (vert/horiz/deputy) | `privilege.py` | `get_privilege_transitions`, `get_confused_deputy_paths` |
+| Sensitive-data categories + impact | `sensitivity_data.py` | `get_sensitive_assets`, `analyze_path_sensitivity` |
+| Search modes | `modes.py` | (via `run_attack_graph(search_mode=…)` / CLI `--mode`) |
+| Blast radius | `blast.py` | `get_blast_radius` |
+| Choke points / minimal cut | `choke.py` | `get_choke_points` |
+| Fix impact (analysis only) | `fix_impact.py` | `analyze_fix_impact` |
+| Plain-language explanation + rejection reasons | `explain.py` | `explain_path`, `get_rejected_path_reason` |
+| Equivalence grouping (shared root cause) | `equivalence.py` | `get_equivalent_paths` |
+| Tenant boundaries / AI paths / temporal | `api.py` | `get_tenant_boundaries`, `get_ai_attack_paths`, `get_temporal_dependencies` |
+
+## Three-valued precondition logic (`logic.py`)
+
+Reachability is rarely a flat list; it is an expression such as
+`(public_network OR authenticated_session) AND attacker_controlled_input`.
+Part 2 represents such expressions as JSON-serialisable `AND` / `OR` / `ATOM`
+trees and evaluates them with **Kleene three-valued logic**:
+
+- `AND` → `FALSE` if any operand is `FALSE`; else `UNKNOWN` if any is `UNKNOWN`;
+  else `TRUE`.
+- `OR`  → `TRUE` if any operand is `TRUE`; else `UNKNOWN` if any is `UNKNOWN`;
+  else `FALSE`.
+
+**The hard rule: `UNKNOWN` is never promoted to `TRUE`.** An attacker-supplied
+atom (`satisfied_by == "attacker"`) is `TRUE`; everything else stays `UNKNOWN`
+until an explicit resolver proves it. This mirrors the whole-project honesty
+contract (unknown reachability → `UNVERIFIED`, never a confident claim).
+`preconditions.py` gains opt-in `*_precondition_expr()` builders that emit these
+trees; the original flat `*_preconditions()` helpers are unchanged.
+
+## Identity model & transitions (`identity.py`)
+
+Identity types: `ANONYMOUS`, `ATTACKER`, `AUTHENTICATED_USER`, `TENANT_USER`,
+`PRIVILEGED_USER`, `SERVICE`, `SYSTEM`, `AI_AGENT`, `UNKNOWN`. A path is also a
+sequence of identities the attacker occupies. Transitions are **evidence-backed
+only**: a transition is emitted when a real `escalates_to` / `crosses_tenant` /
+`invokes` / `yields` edge or an authenticated entrypoint justifies it, and it
+carries that edge's evidence. The starting identity is derived from the
+entrypoint's reachability (public → `ATTACKER`, authenticated → low-priv
+session), never over-claimed.
+
+## Application state model (`state_model.py`)
+
+States: `UNAUTHENTICATED`, `AUTHENTICATED`, `AUTHORIZED`, `TENANT_SCOPED`,
+`PRIVILEGED`, `TOOL_EXECUTION`, `COMPROMISED`, `UNKNOWN`. State is inferred
+**lightly** and only from code-visible signals already in the graph — an
+authenticated entrypoint, a control/guard node on the path, an
+escalation/tenant/invoke edge, or a reached asset. With no code-visible guard
+the state stays `UNKNOWN` rather than being invented. Each transition carries
+the evidence that justified it.
+
+## Privilege transitions (`privilege.py`)
+
+Every identity transition is classified into a well-known pattern:
+
+- **`vertical`** — a lower role becomes a higher one (user → admin), typically
+  via `escalates_to` (see `priv_esc.py`).
+- **`horizontal`** — same tier, different scope (tenant-A → tenant-B), via
+  `crosses_tenant` (see `cross_tenant.py`).
+- **`confused_deputy`** — a *trusted* component performs a privileged action on
+  the attacker's behalf: SSRF (the server fetches an internal resource for the
+  attacker — see `multi_chain.py`) or an agent that `invokes` a privileged tool
+  from injected instructions (see `ai_chain.py`).
+
+`privilege_graph()` rolls these up into a small identity→identity graph;
+`get_confused_deputy_paths()` lists the path ids exhibiting the deputy pattern.
+
+## Sensitive-data categories & impact (`sensitivity_data.py`)
+
+Categories (with impact weight in `[0,1]`): `PUBLIC` 0.10, `INTERNAL` 0.40,
+`CONFIDENTIAL` 0.60, `AI_CONTEXT` 0.70, `PII` 0.75, `FINANCIAL` 0.80,
+`CREDENTIAL` 0.95, `SECRET` 1.00, `UNKNOWN` 0.30. The weight is an **impact**
+dimension only — not a confidence, not a severity — and it never upgrades a
+path's status. Categorisation reads the existing `asset.kind`; anything unmapped
+falls back to `UNKNOWN` (deliberately *low*), so impact is never over-claimed
+for data we cannot categorise.
+
+## Search modes (`modes.py`)
+
+A mode is an explicit, opt-in **status filter** over live paths:
+
+- `CONFIRMED_ONLY` — only `CONFIRMED`.
+- `CONFIRMED_AND_LIKELY` — `CONFIRMED` + `LIKELY` (the credible set).
+- `INCLUDE_UNKNOWN` (default) — also `UNVERIFIED` (surface-for-review set).
+
+`BLOCKED` / `INVALID` are **never live in any mode** — a blocked chain has an
+effective barrier and an invalid chain does not exist. Modes never mutate the
+written `attack-paths.json` `paths[]`: they filter a copy for display/querying.
+`run_attack_graph(target, search_mode=…)` records the mode and re-derives the
+`posture` view; the enumerated path set is identical regardless of mode.
+
+## Bounded graph search (`search.py`)
+
+A generic, **bounded, deterministic** BFS/DFS over `graph.nodes` / `graph.edges`
+(depth-capped by `MAX_SEARCH_DEPTH`, result-capped by `MAX_SEARCH_RESULTS`). It
+traverses **only edges that already exist** (never invents a hop), and prunes
+(a) edges blocked by an *effective* control and (b) edges into a
+`FALSE_POSITIVE` / `INVALID` finding. Neighbours are visited in a stable
+`(edge type, to id)` order so results are reproducible.
+
+## Blast radius (`blast.py`)
+
+`get_blast_radius(node_id)` returns everything reachable from a compromised node
+over evidence-backed, unblocked edges — grouped by type, with the reachable
+sensitive assets, the single most-sensitive category reachable, and
+representative shortest paths. A non-existent origin returns an empty, honest
+result. `rank_blast_origins()` ranks likely compromise origins by radius impact.
+
+## Choke points / minimal cut (`choke.py`)
+
+`get_choke_points()` ranks nodes by **path-betweenness** (how many distinct
+paths they lie on), weighting controls/findings slightly higher because they are
+the natural remediation targets. `minimal_cut()` is a greedy set-cover
+heuristic that picks choke points until all live paths are covered — advertised
+as a heuristic, not an exact min-cut solver.
+
+## Fix impact (`fix_impact.py`) — analysis only
+
+`analyze_fix_impact(finding_or_control)` projects the effect of one remediation
+**without editing code or re-running hunters**:
+
+- Fixing a **finding** *removes* every path that traverses it.
+- Hardening a **control** *blocks* (weakens) every path it gates — those chains
+  become `BLOCKED`; the finding may still stand for an already-authorised actor.
+
+`rank_fixes()` orders remediable nodes by how many paths a fix removes/weakens.
+
+## Equivalence grouping (`equivalence.py`)
+
+`get_equivalent_paths()` groups paths that reduce to the same underlying bug:
+two paths are equivalent when they share a finding/candidate-seed node, or when
+Part 1 already linked them via `shares_root_cause_with`. Each group names a
+representative (highest-status, shortest) and the shared finding(s) — the single
+fix target — so the path count is not inflated by re-framings of one root cause.
+
+## Explanation & rejection reasons (`explain.py`)
+
+`explain_path()` restates a path in plain language built **only** from the
+evidence already on its nodes/edges (like `llm_stub`, it can never invent a
+node, edge, credential, impact or reachability claim; `invented` is always
+`False`). `rejected_path_reason()` / `get_rejected_path_reason()` render *why* a
+path is not live (BLOCKED / INVALID / UNVERIFIED) from the path's own
+`status_reasons`.
+
+## New result fields (additive, backward compatible)
+
+`run_attack_graph(...)` keeps every existing field and adds:
+
+| Field | Meaning |
+|---|---|
+| `search_mode` | the active mode (default `INCLUDE_UNKNOWN`) — does **not** filter `paths[]` |
+| `identity_transitions` | evidence-backed identity moves across all paths |
+| `privilege_transitions` | vertical / horizontal / confused-deputy transitions |
+| `state_transitions` | application-state moves across all paths |
+| `rejected_paths` | BLOCKED / INVALID paths with plain-language reasons |
+| `posture` | rollup: reachable identities/states, max sensitivity, privilege-pattern counts, confused-deputy paths, top choke points, top blast origins, live-vs-rejected counts |
+
+`ensure_no_secret_values` runs over the whole result (including these fields),
+and the private `_evidence` ref is still stripped by the writer.
+
+## Public query API (`engines.attack_graph.api`)
+
+Deterministic, read-only helpers over a `run_attack_graph(...)` result:
+`get_path_state`, `get_path_identities`, `get_privilege_transitions`,
+`get_tenant_boundaries`, `get_sensitive_assets`, `get_blast_radius`,
+`get_equivalent_paths`, `get_choke_points`, `analyze_fix_impact`,
+`analyze_path_sensitivity`, `get_rejected_path_reason`,
+`get_temporal_dependencies` (thin but real: per-path ordered prerequisites),
+`get_state_transitions`, `get_identity_transitions`,
+`get_confused_deputy_paths`, `get_ai_attack_paths`, plus `explain_path`.
+
+## CLI (`axguard paths` — new optional view filters)
+
+Display-only filters (the written `attack-paths.json` is always the full,
+unfiltered set):
+
+- `--mode CONFIRMED_ONLY|CONFIRMED_AND_LIKELY|INCLUDE_UNKNOWN`
+- `--current` — only currently-exploitable paths (`CONFIRMED`/`LIKELY`)
+- `--blocked` — only paths blocked by an effective control
+- `--unknown` — only `UNVERIFIED` paths (for review)
+- `--critical` — only paths reaching high-sensitivity assets (PII and above)
+- `--shortest` — only the shortest-credible path per `(entry, target)`
+- `--predictive` — attack-surface / architecture-drift signals (never current findings)
+- `--diff PATH_A PATH_B` — compare two saved `attack-paths.json` artifacts
+- `--what-if SCENARIO` — counterfactual paths marked `hypothetical: true` / `PREDICTIVE`
+
+Distinguish clearly: **Current Finding** ≠ **Current Attack Path** ≠ **Blocked Path** ≠
+**Predictive Risk** ≠ **Hypothetical Path**.
+
+## Package layout (Part 2 additions)
+
+```
+engines/attack_graph/
+  logic.py            AND/OR three-valued precondition logic (UNKNOWN never TRUE)
+  identity.py         identity types + evidence-backed identity transitions
+  state_model.py      application states + light, evidence-backed state transitions
+  privilege.py        vertical / horizontal / confused-deputy privilege transitions
+  sensitivity_data.py sensitive-data categories + impact weighting
+  modes.py            search modes (status filters over live paths)
+  search.py           bounded, deterministic BFS/DFS with blocked/impossible pruning
+  blast.py            blast radius from a compromised node (evidence-backed edges)
+  choke.py            choke-point / greedy minimal-cut heuristics
+  fix_impact.py       analyze_fix_impact() — analysis only, no code edits
+  explain.py          plain-language explanation + rejected-path reasons
+  equivalence.py      group equivalent paths sharing a root cause
+  api.py              public, deterministic query surface
+  whatif.py           counterfactual scenarios (hypothetical only)
+  diff.py             attack-graph artifact comparison
+  predictive.py       surface / drift signals (not vulns)
+  sbom.py             manifest-only dependency graph (no CVE DB)
+  temporal.py         multi-step temporal chain heuristics
+  cross_service.py    cross-service trust edges from app model
+  aggregate.py        risk rollup (paths / root causes / choke points)
+  posture.py          Entry→…→Impact posture narrative helper
+  benchmark.py        fixture evaluation harness (measured counts only)
+```
+
+## Non-goals (Part 2)
+
+- No new confidence/evidence system (unchanged from Part 1).
+- No CVE database lookups; SBOM is declared-deps only.
+- No automatic source modification or active exploitation.
+- No LLM calls; `LLMAttackPathStub.invent()` still raises and is never invoked.
+- `fix_impact` is projection only — it never edits source or re-runs hunters.
+- HTML report approval UX lives in `engines/report_ux.py` (separate from this engine).

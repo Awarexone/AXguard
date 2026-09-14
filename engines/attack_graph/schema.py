@@ -207,6 +207,194 @@ MAX_PATH_DEPTH = 8  # max hops (nodes) in a single path
 MAX_PATHS = 200  # global cap on enumerated paths
 
 
+# ===========================================================================
+# Phase 6 Part 2 — attack-path INTELLIGENCE foundation (backward compatible)
+# ---------------------------------------------------------------------------
+# Part 2 adds identity/state/privilege reasoning, sensitivity weighting,
+# search modes, three-valued precondition logic, blast radius, choke points,
+# fix-impact and equivalence analysis. It invents **no** new confidence scale
+# and **no** new evidence-weight table: it reuses the Phase 1-5 vocabulary
+# above and reads only evidence-backed nodes/edges already in the graph. All of
+# the constants below are additive — nothing existing is renamed or removed.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Three-valued (Kleene) truth for precondition logic (logic.py).
+# UNKNOWN is *never* promoted to TRUE — a hop whose precondition is unknown is
+# surfaced for review, never silently assumed satisfied.
+# ---------------------------------------------------------------------------
+TRUTH_TRUE = "TRUE"
+TRUTH_FALSE = "FALSE"
+TRUTH_UNKNOWN = "UNKNOWN"
+TRUTH_VALUES = frozenset({TRUTH_TRUE, TRUTH_FALSE, TRUTH_UNKNOWN})
+
+# Logic expression node operators (logic.py).
+LOGIC_AND = "AND"
+LOGIC_OR = "OR"
+LOGIC_ATOM = "ATOM"
+LOGIC_OPS = frozenset({LOGIC_AND, LOGIC_OR, LOGIC_ATOM})
+
+# ---------------------------------------------------------------------------
+# Identity types (identity.py). An attack path moves an actor between these.
+# ---------------------------------------------------------------------------
+ID_ANONYMOUS = "ANONYMOUS"  # no session — the raw internet
+ID_ATTACKER = "ATTACKER"  # anonymous actor with malicious intent (== start)
+ID_AUTHENTICATED_USER = "AUTHENTICATED_USER"  # a valid low-priv session
+ID_TENANT_USER = "TENANT_USER"  # authenticated, scoped to one tenant/org
+ID_PRIVILEGED_USER = "PRIVILEGED_USER"  # admin / elevated role
+ID_SERVICE = "SERVICE"  # service account / internal caller
+ID_SYSTEM = "SYSTEM"  # host / worker / os-level context
+ID_AI_AGENT = "AI_AGENT"  # an autonomous tool-calling agent identity
+ID_UNKNOWN = "UNKNOWN"
+
+IDENTITY_TYPES = frozenset(
+    {
+        ID_ANONYMOUS,
+        ID_ATTACKER,
+        ID_AUTHENTICATED_USER,
+        ID_TENANT_USER,
+        ID_PRIVILEGED_USER,
+        ID_SERVICE,
+        ID_SYSTEM,
+        ID_AI_AGENT,
+        ID_UNKNOWN,
+    }
+)
+
+# Rough privilege ordering (higher == more powerful). Used only to *describe* a
+# transition as elevating/lateral/lowering — never to invent a transition.
+IDENTITY_PRIV_RANK = {
+    ID_ANONYMOUS: 0,
+    ID_ATTACKER: 0,
+    ID_UNKNOWN: 0,
+    ID_AUTHENTICATED_USER: 1,
+    ID_TENANT_USER: 1,
+    ID_SERVICE: 2,
+    ID_AI_AGENT: 2,
+    ID_PRIVILEGED_USER: 3,
+    ID_SYSTEM: 4,
+}
+
+# ---------------------------------------------------------------------------
+# Application states (state_model.py). Inferred *lightly* from middleware /
+# guards on the path; never invented when there is no code-visible guard.
+# ---------------------------------------------------------------------------
+STATE_UNAUTHENTICATED = "UNAUTHENTICATED"
+STATE_AUTHENTICATED = "AUTHENTICATED"
+STATE_AUTHORIZED = "AUTHORIZED"
+STATE_TENANT_SCOPED = "TENANT_SCOPED"
+STATE_PRIVILEGED = "PRIVILEGED"
+STATE_TOOL_EXECUTION = "TOOL_EXECUTION"  # an agent is running a privileged tool
+STATE_COMPROMISED = "COMPROMISED"  # a sensitive asset has been reached
+STATE_UNKNOWN = "UNKNOWN"
+
+APP_STATES = frozenset(
+    {
+        STATE_UNAUTHENTICATED,
+        STATE_AUTHENTICATED,
+        STATE_AUTHORIZED,
+        STATE_TENANT_SCOPED,
+        STATE_PRIVILEGED,
+        STATE_TOOL_EXECUTION,
+        STATE_COMPROMISED,
+        STATE_UNKNOWN,
+    }
+)
+
+# ---------------------------------------------------------------------------
+# Privilege-transition patterns (privilege.py).
+# ---------------------------------------------------------------------------
+PRIV_VERTICAL = "vertical"  # user → admin (gain a higher role)
+PRIV_HORIZONTAL = "horizontal"  # tenant-A → tenant-B (same tier, other scope)
+PRIV_CONFUSED_DEPUTY = "confused_deputy"  # a trusted component acts for attacker
+PRIV_PATTERNS = frozenset({PRIV_VERTICAL, PRIV_HORIZONTAL, PRIV_CONFUSED_DEPUTY})
+
+# ---------------------------------------------------------------------------
+# Sensitive-data categories + impact weight (sensitivity_data.py).
+# Weight is an *impact* multiplier for assets, in [0, 1]; it is not a
+# confidence and not a severity. UNKNOWN is deliberately low, never high.
+# ---------------------------------------------------------------------------
+SENS_PUBLIC = "PUBLIC"
+SENS_INTERNAL = "INTERNAL"
+SENS_CONFIDENTIAL = "CONFIDENTIAL"
+SENS_PII = "PII"
+SENS_FINANCIAL = "FINANCIAL"
+SENS_CREDENTIAL = "CREDENTIAL"
+SENS_SECRET = "SECRET"
+SENS_AI_CONTEXT = "AI_CONTEXT"  # the model instruction context / agent memory
+SENS_UNKNOWN = "UNKNOWN"
+
+SENSITIVITY_CATEGORIES = (
+    SENS_PUBLIC,
+    SENS_INTERNAL,
+    SENS_CONFIDENTIAL,
+    SENS_PII,
+    SENS_FINANCIAL,
+    SENS_CREDENTIAL,
+    SENS_SECRET,
+    SENS_AI_CONTEXT,
+    SENS_UNKNOWN,
+)
+
+SENSITIVITY_IMPACT = {
+    SENS_PUBLIC: 0.10,
+    SENS_INTERNAL: 0.40,
+    SENS_CONFIDENTIAL: 0.60,
+    SENS_AI_CONTEXT: 0.70,
+    SENS_PII: 0.75,
+    SENS_FINANCIAL: 0.80,
+    SENS_CREDENTIAL: 0.95,
+    SENS_SECRET: 1.00,
+    SENS_UNKNOWN: 0.30,
+}
+
+# Map the existing app_model/attack_graph ``asset.kind`` vocabulary onto a
+# sensitivity category. Anything unmapped falls back to UNKNOWN (low), never to
+# a high tier — we do not over-claim impact for data we cannot categorise.
+ASSET_KIND_TO_SENSITIVITY = {
+    "secret": SENS_SECRET,
+    "credential": SENS_CREDENTIAL,
+    "token": SENS_CREDENTIAL,
+    "admin": SENS_CREDENTIAL,
+    "filesystem": SENS_SECRET,
+    "pii": SENS_PII,
+    "financial": SENS_FINANCIAL,
+    "database": SENS_CONFIDENTIAL,
+    "internal": SENS_INTERNAL,
+    "info": SENS_PUBLIC,
+    "ai_context": SENS_AI_CONTEXT,
+    "unknown": SENS_UNKNOWN,
+}
+
+# ---------------------------------------------------------------------------
+# Search modes (modes.py). A mode is a *status filter* over live attack paths.
+# BLOCKED / INVALID are never "live" in any mode — they are rejected paths.
+# ---------------------------------------------------------------------------
+MODE_CONFIRMED_ONLY = "CONFIRMED_ONLY"
+MODE_CONFIRMED_AND_LIKELY = "CONFIRMED_AND_LIKELY"
+MODE_INCLUDE_UNKNOWN = "INCLUDE_UNKNOWN"
+SEARCH_MODES = (MODE_CONFIRMED_ONLY, MODE_CONFIRMED_AND_LIKELY, MODE_INCLUDE_UNKNOWN)
+# Default keeps the full ``paths[]`` list intact (nothing filtered out of the
+# artifact); modes are applied as an explicit, opt-in view.
+DEFAULT_SEARCH_MODE = MODE_INCLUDE_UNKNOWN
+
+MODE_ALLOWED_STATUSES = {
+    MODE_CONFIRMED_ONLY: frozenset({PATH_CONFIRMED}),
+    MODE_CONFIRMED_AND_LIKELY: frozenset({PATH_CONFIRMED, PATH_LIKELY}),
+    MODE_INCLUDE_UNKNOWN: frozenset({PATH_CONFIRMED, PATH_LIKELY, PATH_UNVERIFIED}),
+}
+
+# Statuses that are always "rejected" (a barrier stops them, or the chain does
+# not exist) — never live in any search mode.
+REJECTED_STATUSES = frozenset({PATH_BLOCKED, PATH_INVALID})
+
+# Bounded-search caps for the generic graph search (search.py). These mirror
+# the enumeration limits above so Part 2 search never explodes combinatorially.
+MAX_SEARCH_DEPTH = MAX_PATH_DEPTH
+MAX_SEARCH_RESULTS = MAX_PATHS
+MAX_BLAST_NODES = 500  # cap on nodes returned by a blast-radius walk
+
+
 def empty_attack_graph(target: Path) -> dict[str, Any]:
     root = str(Path(target).resolve())
     return {
