@@ -1,0 +1,104 @@
+{
+  "notes": "Phase 6 Part 2 regression corpus. Expected attack-path statuses follow docs/attack-graph.md: CONFIRMED | LIKELY | UNVERIFIED | INVALID | BLOCKED. Cases marked \"soft\": true exercise patterns (confused deputy, state-dependent / cross-request chains) that no shipped chaining detector recognizes yet — tests/test_attack_graph_corpus.py skips (never fails) those cases when no path is produced, so this suite stays green while other in-flight work lands the matching detector. All other cases exercise chaining.py capabilities that already exist and are hard-asserted.",
+  "cases": [
+    {
+      "file": "confirmed_path.py",
+      "chain": "public entrypoint -> sql-injection -> sensitive asset",
+      "hops": 2,
+      "tags": ["direct_chain", "confirmed"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "soft": false,
+      "notes": "Stable always-on anchor: no control sits on the path."
+    },
+    {
+      "file": "blocked_path_case.py",
+      "chain": "public internet -> admin-only sql-injection endpoint",
+      "hops": 2,
+      "tags": ["control_barrier", "blocked"],
+      "expect_path_exists": true,
+      "expect_status": ["BLOCKED"],
+      "forbid_status": ["CONFIRMED"],
+      "soft": false,
+      "notes": "require_admin fails closed (signature + expiry + role check). Only the unauthenticated-attacker path is BLOCKED."
+    },
+    {
+      "file": "false_path.py",
+      "chain": "reflected-xss (/profile) and path-traversal (/files/read) — same file, unrelated",
+      "hops": 0,
+      "tags": ["no_relation", "false_path"],
+      "expect_path_exists": false,
+      "expect_status": [],
+      "forbid_status": ["CONFIRMED", "LIKELY"],
+      "soft": false,
+      "notes": "Same-file co-location must not be upgraded into a chain."
+    },
+    {
+      "file": "unknown_prerequisite.py",
+      "chain": "scheduled task (unknown activation flag) -> command-injection -> filesystem",
+      "hops": 2,
+      "tags": ["prerequisite_unknown"],
+      "expect_path_exists": true,
+      "expect_status": ["UNVERIFIED"],
+      "forbid_status": ["CONFIRMED", "INVALID", "BLOCKED"],
+      "soft": false,
+      "notes": "No code-visible way to resolve whether the remote feature flag is ever on. Must not default to always-on or never-on."
+    },
+    {
+      "file": "privilege_escalation.py",
+      "chain": "authenticated user -> mass-assignment role escalation -> admin billing directory",
+      "hops": 2,
+      "tags": ["priv_esc"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "soft": false,
+      "notes": "require_admin trusts the same mutable role field the user just set on themselves."
+    },
+    {
+      "file": "cross_tenant_access.py",
+      "chain": "tenant-A identity -> broken object-level authz -> tenant-B statement/PII",
+      "hops": 2,
+      "tags": ["cross_tenant"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "soft": false,
+      "notes": "require_workspace_member checks caller org membership but never re-checks the returned statement's org_id."
+    },
+    {
+      "file": "ai_mcp_tool_abuse.py",
+      "chain": "prompt injection (fetched document) -> MCP agent -> privileged mcp_read_file tool -> secrets file",
+      "hops": 3,
+      "tags": ["ai_chain", "prompt_injection", "mcp"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "soft": false,
+      "notes": "No allowlist and no human-confirmation gate on the MCP tool call."
+    },
+    {
+      "file": "confused_deputy.py",
+      "chain": "any authenticated caller -> confused-deputy delegation (service's own key) -> another customer's refund data",
+      "hops": 2,
+      "tags": ["confused_deputy"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "soft": true,
+      "notes": "Forward-looking: no shipped detector recognizes own-credential delegation without per-object authority re-check yet. Skip softly until it lands."
+    },
+    {
+      "file": "state_dependent_chain.py",
+      "chain": "request-1 (apply-coupon, stores unvalidated state) -> request-2 (checkout, trusts state) -> pricing impact",
+      "hops": 2,
+      "tags": ["state_dependent", "cross_request"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "soft": true,
+      "notes": "Forward-looking: needs session-state dataflow tracked across two distinct handlers, which no shipped detector performs yet. Skip softly until it lands."
+    }
+  ]
+}

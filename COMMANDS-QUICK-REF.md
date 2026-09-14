@@ -74,3 +74,12 @@ axguard evidence .
 axguard paths .   # alias: axguard attack-paths .
 axguard audit . --fail-on high --out-dir .findings/axguard
 ```
+
+## Risk aggregation & posture (Phase 6 Part 2)
+
+`engines/attack_graph/aggregate.py` (risk rollup: root causes, credible/
+blocked paths, choke points) and `engines/attack_graph/posture.py`
+(`Entry → Trust → Controls → Weak → Vulns → Priv → Assets → Impact` narrative)
+are importable helpers on top of `run_attack_graph()` — not yet CLI-wired.
+See [`commands/axguard-paths.md`](commands/axguard-paths.md). A regression
+corpus for this phase lives in `fixtures/attack_paths_corpus/`.
