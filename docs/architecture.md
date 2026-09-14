@@ -6,12 +6,14 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 
 | Package / path | Responsibility |
 |---|---|
-| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `help`, `version` |
+| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `help`, `version` |
 | `engines/scanner.py` | Orchestrates one scan pass |
 | `engines/rules_loader.py` | Loads `rules/*.json` (and a narrow YAML subset) |
 | `engines/source_scan.py` | Walks the tree, applies regex rules, builds findings |
 | `engines/audit.py` | A→Z phases + severity counts around a scan |
 | `engines/app_model/` | Application understanding + attack-surface graph (`axguard surface`) |
+| `engines/dataflow/` | Source→sink taint paths over the app model (`axguard flow`) |
+| `engines/verify/` | Hunter → Judge verification diagnostic (`axguard verify`) |
 | `engines/report.py` | text / json / markdown / HTML renderers + `write_reports` |
 | `engines/banner.py` | ASCII branding |
 | `engines/paths.py` | Resolves package root + default `rules/` |
@@ -60,7 +62,7 @@ sort by severity, then file/line
 
 ## Audit phases
 
-Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; other phases still structure findings by rule prefix.
+Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; it also soft-runs Phase 2 dataflow and Phase 3 Hunter→Judge verification (diagnostic artifacts only — never fails the audit). Other phases still structure findings by rule prefix.
 
 ## Reports
 

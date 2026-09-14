@@ -19,7 +19,7 @@ frameworks:
   nist_csf: []
   nist_ai_rmf: []
 related_skills: [api-security, command-injection, security-triage, security-remediation]
-related_commands: [/axguard-sql, /axguard-inject, /axguard-audit]
+related_commands: [/axguard-sql, /axguard-inject, /axguard-audit, /axguard-flow]
 related_rules: [sql., nosql.]
 references:
   - https://owasp.org/Top10/A03_2021-Injection/
@@ -54,11 +54,12 @@ Attacker influence over WHERE/ORDER/identifiers can yield data disclosure, authe
 
 ## Analysis Workflow
 
-1. Find sinks: `execute`, `executemany`, `query`, `.raw`, `text(`, cursor calls.
-2. Find sources: request params, headers, path, webhook bodies, AI tool args.
-3. Determine if input is concatenated, f-string formatted, or `%`-formatted into SQL.
-4. Check whether identifiers (table/column) are user-controlled — bind parameters cannot fix identifier injection; need allowlists.
-5. Confirm ORM usage is actually parameterized (some `.raw`/`extra` APIs are not).
+1. Prefer `axguard flow` evidence when available (`sources_to_sql` / unsanitized paths in `dataflow.json`).
+2. Find sinks: `execute`, `executemany`, `query`, `.raw`, `text(`, cursor calls.
+3. Find sources: request params, headers, path, webhook bodies, AI tool args.
+4. Determine if input is concatenated, f-string formatted, or `%`-formatted into SQL.
+5. Check whether identifiers (table/column) are user-controlled — bind parameters cannot fix identifier injection; need allowlists.
+6. Confirm ORM usage is actually parameterized (some `.raw`/`extra` APIs are not).
 
 ## Evidence Requirements
 

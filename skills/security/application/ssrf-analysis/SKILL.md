@@ -19,7 +19,7 @@ frameworks:
   nist_csf: []
   nist_ai_rmf: []
 related_skills: [api-security, cloud-security, secrets-detection, security-triage, security-remediation]
-related_commands: [/axguard-ssrf, /axguard-cloud, /axguard-audit]
+related_commands: [/axguard-ssrf, /axguard-cloud, /axguard-audit, /axguard-flow]
 related_rules: [ssrf., cloud.aws-metadata]
 references:
   - https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/
@@ -70,7 +70,7 @@ Attacker goals:
 
 ## Discovery
 
-1. Run `axguard scan .` or `axguard audit .` and collect `ssrf.*` / metadata findings.
+1. Prefer `axguard flow` evidence when available (`dataflow.json` / unsanitized net paths); otherwise run `axguard scan .` or `axguard audit .` and collect `ssrf.*` / metadata findings.
 2. Grep for network clients: `requests.`, `httpx.`, `urllib`, `fetch(`, `axios.`, `curl`, `HttpClient`, `RestTemplate`.
 3. Find URL construction: query params, body fields, webhooks, `next=`, `url=`, `callback=`, `redirect=`.
 

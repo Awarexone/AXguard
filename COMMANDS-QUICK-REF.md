@@ -7,6 +7,8 @@
 | Full pre-ship audit + HTML/MD | `/axguard-audit` |
 | Fast scan | `/axguard-scan` |
 | Map app / attack surface | `/axguard-surface` |
+| Dataflow / taint paths | `/axguard-flow` |
+| Hunter → Judge verification | `/axguard-verify` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
 | Auth / IDOR | `/axguard-auth` |
@@ -41,6 +43,10 @@
 .findings/axguard/axguard-report.md
 .findings/axguard/application-model.json
 .findings/axguard/application-model.md
+.findings/axguard/dataflow.json
+.findings/axguard/dataflow.md
+.findings/axguard/verification.json
+.findings/axguard/verification.md
 .findings/axguard/axguard-report.json
 ```
 
@@ -51,5 +57,8 @@ axguard help
 axguard version   # 0.2.0
 axguard audit .
 axguard scan .
+axguard surface .
+axguard flow .
+axguard verify .
 axguard audit . --fail-on high --out-dir .findings/axguard
 ```

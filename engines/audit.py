@@ -7,8 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from engines.app_model import build_application_model, write_application_model
+from engines.dataflow import analyze_dataflow, write_dataflow_report
 from engines.paths import default_rules_dir
 from engines.scanner import ScanOptions, run_scan
+from engines.verify import run_verification, write_verification_report
 
 AUDIT_PHASES = (
     ("surface", "Map attack surface (routes, sinks, configs)"),
@@ -73,6 +75,12 @@ def run_audit(options: AuditOptions) -> dict:
     application_model: dict | None = None
     application_model_summary: dict | None = None
     application_model_paths: dict | None = None
+    dataflow_result: dict | None = None
+    dataflow_summary: dict | None = None
+    dataflow_paths: dict | None = None
+    verification_result: dict | None = None
+    verification_summary: dict | None = None
+    verification_paths: dict | None = None
 
     for phase_id, label in AUDIT_PHASES:
         if phase_id not in selected and phase_id != "report":
@@ -98,6 +106,38 @@ def run_audit(options: AuditOptions) -> dict:
                 application_model_paths = write_application_model(application_model, out_dir)
                 phase_entry["application_model_summary"] = application_model_summary
                 phase_entry["status"] = "ok"
+                # Optional Phase 2 dataflow — never fail audit on errors
+                try:
+                    dataflow_result = analyze_dataflow(
+                        options.target, application_model=application_model
+                    )
+                    dataflow_summary = dict(dataflow_result.get("summary") or {})
+                    dataflow_paths = write_dataflow_report(dataflow_result, out_dir)
+                    # Re-write enriched application model after taint attach
+                    application_model_paths = write_application_model(
+                        application_model, out_dir
+                    )
+                    phase_entry["dataflow_summary"] = dataflow_summary
+                except Exception as df_exc:  # noqa: BLE001
+                    phase_entry["dataflow_status"] = "error"
+                    phase_entry["dataflow_error"] = str(df_exc)
+                # Optional Phase 3 Hunter→Judge — never fail audit on errors
+                try:
+                    verification_result = run_verification(
+                        options.target,
+                        application_model=application_model,
+                        dataflow=dataflow_result,
+                    )
+                    verification_summary = dict(
+                        verification_result.get("summary") or {}
+                    )
+                    verification_paths = write_verification_report(
+                        verification_result, out_dir
+                    )
+                    phase_entry["verification_summary"] = verification_summary
+                except Exception as v_exc:  # noqa: BLE001
+                    phase_entry["verification_status"] = "error"
+                    phase_entry["verification_error"] = str(v_exc)
             except Exception as exc:  # noqa: BLE001 — never fail audit on surface model
                 phase_entry["status"] = "error"
                 phase_entry["error"] = str(exc)
@@ -131,6 +171,24 @@ def run_audit(options: AuditOptions) -> dict:
         result["application_model_summary"] = application_model_summary
     if application_model_paths is not None:
         result["application_model_paths"] = application_model_paths
+    if dataflow_result is not None:
+        result["dataflow"] = dataflow_result
+    if dataflow_summary is not None:
+        result["dataflow_summary"] = dataflow_summary
+    if dataflow_paths is not None:
+        result["dataflow_paths"] = dataflow_paths
+    if verification_result is not None:
+        # Drop soft private model refs before attaching to audit payload
+        verification_result = {
+            k: v
+            for k, v in verification_result.items()
+            if not str(k).startswith("_")
+        }
+        result["verification"] = verification_result
+    if verification_summary is not None:
+        result["verification_summary"] = verification_summary
+    if verification_paths is not None:
+        result["verification_paths"] = verification_paths
     return result
 
 

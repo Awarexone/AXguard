@@ -9,9 +9,11 @@ from pathlib import Path
 from engines.app_model import build_application_model, write_application_model
 from engines.audit import AuditOptions, run_audit
 from engines.banner import print_banner
+from engines.dataflow import analyze_dataflow, write_dataflow_report
 from engines.paths import default_rules_dir
 from engines.report import render_report, write_reports
 from engines.scanner import ScanOptions, run_scan
+from engines.verify import run_verification, write_verification_report
 
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
 
@@ -63,6 +65,30 @@ def build_parser() -> argparse.ArgumentParser:
     )
     surface.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
 
+    flow = sub.add_parser(
+        "flow",
+        help="Dataflow / taint analysis (diagnostic paths, not findings)",
+    )
+    flow.add_argument("path", nargs="?", default=".", help="Target path (default: .)")
+    flow.add_argument(
+        "--out-dir",
+        default=".findings/axguard",
+        help="Directory for dataflow artifacts (default: .findings/axguard)",
+    )
+    flow.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+
+    verify = sub.add_parser(
+        "verify",
+        help="Hunter → Judge verification diagnostic (not a vuln report)",
+    )
+    verify.add_argument("path", nargs="?", default=".", help="Target path (default: .)")
+    verify.add_argument(
+        "--out-dir",
+        default=".findings/axguard",
+        help="Directory for verification artifacts (default: .findings/axguard)",
+    )
+    verify.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
     return parser
@@ -76,6 +102,8 @@ AXguard — start with the workflow you need
   About to publish / open a PR    axguard audit .   |  /axguard-audit
   Quick check while coding        axguard scan .    |  /axguard-scan
   Map attack surface / app model  axguard surface . |  /axguard-surface
+  Dataflow / taint paths          axguard flow .    |  /axguard-flow
+  Hunter → Judge verification     axguard verify .  |  /axguard-verify
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -136,7 +164,9 @@ def main(argv: list[str] | None = None) -> int:
         print(HELP_TEXT)
         return 0
 
-    if args.command in {"scan", "audit", "surface"} and not getattr(args, "no_banner", False):
+    if args.command in {"scan", "audit", "surface", "flow", "verify"} and not getattr(
+        args, "no_banner", False
+    ):
         print_banner()
         print()
 
@@ -178,6 +208,24 @@ def main(argv: list[str] | None = None) -> int:
             amp = result["application_model_paths"]
             print(f"  model {amp.get('json')}")
             print(f"  model {amp.get('markdown')}")
+        if result.get("dataflow_paths"):
+            dfp = result["dataflow_paths"]
+            print(f"  flow  {dfp.get('json')}")
+            print(f"  flow  {dfp.get('markdown')}")
+        if result.get("verification_paths"):
+            vp = result["verification_paths"]
+            print(f"  verify {vp.get('json')}")
+            print(f"  verify {vp.get('markdown')}")
+        if result.get("verification_summary"):
+            vs = result["verification_summary"]
+            print(
+                "  verify counts: "
+                f"candidates={vs.get('candidate_count', 0)} "
+                f"VERIFIED={vs.get('VERIFIED', 0)} "
+                f"LIKELY={vs.get('LIKELY', 0)} "
+                f"UNVERIFIED={vs.get('UNVERIFIED', 0)} "
+                f"FALSE_POSITIVE={vs.get('FALSE_POSITIVE', 0)}"
+            )
         if args.open_summary:
             print()
             print(render_report(result, "md"))
@@ -207,6 +255,56 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  frameworks  {', '.join(str(x) for x in frameworks) or 'unknown'}")
         print(f"  json        {paths['json']}")
         print(f"  md          {paths['markdown']}")
+        return 0
+
+    if args.command == "flow":
+        target = Path(args.path).resolve()
+        if not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        out_dir = Path(args.out_dir)
+        flow_result = analyze_dataflow(target)
+        paths = write_dataflow_report(flow_result, out_dir)
+        summary = flow_result.get("summary") or {}
+        print("dataflow analysis complete (diagnostic — not findings)")
+        print(f"  sources     {summary.get('source_count', 0)}")
+        print(f"  sinks       {summary.get('sink_count', 0)}")
+        print(f"  paths       {summary.get('path_count', 0)}")
+        print(f"  unsanitized {summary.get('unsanitized_path_count', 0)}")
+        top = (flow_result.get("taint_paths") or [])[:8]
+        if top:
+            print("  top paths:")
+            for p in top:
+                src = p.get("source") or {}
+                sink = p.get("sink") or {}
+                print(
+                    f"    - [{p.get('taint_state')}/{p.get('confidence')}] "
+                    f"{src.get('name')} → {sink.get('type')}:{sink.get('symbol')} "
+                    f"@ {sink.get('file')}:{sink.get('line')}"
+                )
+        print(f"  json        {paths['json']}")
+        print(f"  md          {paths['markdown']}")
+        return 0
+
+    if args.command == "verify":
+        target = Path(args.path).resolve()
+        if not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        out_dir = Path(args.out_dir)
+        verify_result = run_verification(target)
+        paths = write_verification_report(verify_result, out_dir)
+        summary = verify_result.get("summary") or {}
+        print("verification complete (diagnostic — not a vuln report)")
+        print(f"  candidates      {summary.get('candidate_count', 0)}")
+        print(f"  VERIFIED        {summary.get('VERIFIED', 0)}")
+        print(f"  LIKELY          {summary.get('LIKELY', 0)}")
+        print(f"  UNVERIFIED      {summary.get('UNVERIFIED', 0)}")
+        print(f"  FALSE_POSITIVE  {summary.get('FALSE_POSITIVE', 0)}")
+        print(f"  json            {paths['json']}")
+        print(f"  md              {paths['markdown']}")
         return 0
 
     parser.print_help()
