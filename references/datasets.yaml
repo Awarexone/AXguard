@@ -1,0 +1,40 @@
+# references/datasets.yaml — Hugging Face / dataset metadata only
+# accessed: 2026-09-15
+# Do not redistribute dataset dumps or large derived corpora in this repo.
+
+datasets:
+  - name: Code_Vulnerability_Security_DPO
+    id: CyberNative/Code_Vulnerability_Security_DPO
+    url: https://huggingface.co/datasets/CyberNative/Code_Vulnerability_Security_DPO
+    license: apache-2.0
+    version: "2024-02"
+    accessed: "2026-09-15"
+    type: synthetic_preference
+    recommendation: metadata-only
+    use: >
+      Derived secure vs insecure coding pattern concepts for skill examples
+      (SQL/command/deserialization). Do not redistribute rows or train on
+      dumped content inside AXGuard.
+    skills: [sql-injection, command-injection, deserialization-security]
+    notes:
+      - fully synthetic / model-generated (owner stated; no human/SAST validation)
+      - high label-noise / insecure-"fixed"-code risk
+      - metadata-only for skill provenance; prefer OWASP/CWE as authority
+      - preference / DPO format
+      - not a substitute for CWE/OWASP primary sources
+
+  - name: unified-vulnerability-intelligence-dataset
+    id: ismailtasdelen/unified-vulnerability-intelligence-dataset
+    url: https://huggingface.co/datasets/ismailtasdelen/unified-vulnerability-intelligence-dataset
+    license: mit
+    version: "3.0"
+    accessed: "2026-09-15"
+    type: vulnerability_intelligence
+    recommendation: derived_taxonomy_ok
+    use: >
+      CWE / OWASP / CVSS linkage concepts for framework mapping cross-checks.
+      Do not dump records into skills; cite official CWE/OWASP pages as primary.
+    skills: [sql-injection, ssrf-analysis, xss-analysis, security-triage]
+    notes:
+      - derived taxonomy OK
+      - verify contested IDs against cwe.mitre.org and owasp.org

@@ -358,9 +358,36 @@ Beyond open-source tools, AwareXone also builds AI-driven defenses against scams
 | [docs/architecture.md](docs/architecture.md) | How the scanner works |
 | [docs/adding-rules.md](docs/adding-rules.md) | Adding detections |
 | [docs/plugin.md](docs/plugin.md) | Agent plugin setup |
+| [docs/SKILL-SCHEMA.md](docs/SKILL-SCHEMA.md) | Domain skill frontmatter + sections |
+| [docs/SECURITY-KNOWLEDGE-INVENTORY.md](docs/SECURITY-KNOWLEDGE-INVENTORY.md) | Knowledge-layer inventory |
+| [skills/index.yaml](skills/index.yaml) | Skill registry (30 core + orchestration) |
+| [references/](references/) | Framework / repo / dataset provenance |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributing to AXguard |
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | Contributors |
 | [skills/axguard-knowledge/](skills/axguard-knowledge/SKILL.md) | Vuln-class knowledge pack |
+
+---
+
+## Security knowledge layer
+
+AXguard pairs a **deterministic CLI scanner** with a **research-backed skill system** so agents can reason, not just match regexes.
+
+```text
+Frameworks (OWASP / CWE / …)
+        ↓
+references/ (provenance index)
+        ↓
+skills/security/* (30 core domain skills)
+        ↓
+skills/axguard-* (orchestration: audit → triage → fix → report)
+        ↓
+commands/ + rules/ + CLI
+```
+
+- **Orchestration skills** drive workflows (`/axguard-audit`, triage, remediate).
+- **Domain skills** teach source→sink analysis, evidence gates, FP controls, and fixes per class (SSRF, SQLi, authZ, prompt injection, MCP, …).
+- **Provenance** lives in `references/` — cite official IDs only; no invented CWE/OWASP mappings; HF datasets are metadata/derived-knowledge only.
+- Validate with: `python scripts/validate_skills.py`
 
 ---
 

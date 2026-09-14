@@ -1,0 +1,137 @@
+# references/repositories.yaml — methodology sources (metadata only)
+# accessed: 2026-09-15
+# Do not vendor large trees or payload dumps into AXGuard.
+
+repositories:
+  # AwareXone
+  - name: Agentic-Bug-Hunter
+    org: Awarexone
+    url: https://github.com/Awarexone/Agentic-Bug-Hunter
+    license: MIT
+    stars: 4769
+    accessed: "2026-09-15"
+    use: methodology for triage discipline and vuln-class hunting workflows
+    skills: [security-triage, authorization-analysis, ssrf-analysis]
+    note: extract process patterns only; no private report content
+
+  - name: public-skills-builder
+    org: Awarexone
+    url: https://github.com/Awarexone/public-skills-builder
+    license: UNVERIFIED
+    stars: 233
+    accessed: "2026-09-15"
+    use: skill-authoring structure reference
+    skills: []
+    note: SPDX license null on GitHub API at access time — treat as UNVERIFIED
+
+  - name: web3-bug-bounty-hunting-ai-skills
+    org: Awarexone
+    url: https://github.com/Awarexone/web3-bug-bounty-hunting-ai-skills
+    license: MIT
+    stars: 144
+    accessed: "2026-09-15"
+    use: skill packaging patterns; web3-specific content out of scope for core web skills
+    skills: []
+
+  - name: AXguard
+    org: Awarexone
+    url: https://github.com/Awarexone/AXguard
+    license: MIT
+    stars: 1
+    accessed: "2026-09-15"
+    use: canonical rules, commands, orchestration skills
+    skills: [axguard-audit, axguard-triage, axguard-remediate]
+
+  # GitHub methodology (extract methodology only)
+  - name: CheatSheetSeries
+    org: OWASP
+    url: https://github.com/OWASP/CheatSheetSeries
+    license: CC-BY-SA-4.0
+    stars: 33173
+    accessed: "2026-09-15"
+    use: defensive cheat-sheet themes for remediation guidance
+    skills: [security-remediation, configuration-security, api-security]
+    note: no verbatim sheet dumps
+
+  - name: wstg
+    org: OWASP
+    url: https://github.com/OWASP/wstg
+    license: CC-BY-SA-4.0
+    stars: 9819
+    accessed: "2026-09-15"
+    use: testing methodology structure; cite WSTG IDs only when verified
+    skills: [threat-modeling, attack-surface-mapping]
+
+  - name: ASVS
+    org: OWASP
+    url: https://github.com/OWASP/ASVS
+    license: CC-BY-SA-4.0
+    stars: 3602
+    accessed: "2026-09-15"
+    use: requirement-oriented verification concepts
+    skills: [security-architecture-review, authentication-analysis]
+
+  - name: PayloadsAllTheThings
+    org: swisskyrepo
+    url: https://github.com/swisskyrepo/PayloadsAllTheThings
+    license: MIT
+    stars: 80853
+    accessed: "2026-09-15"
+    use: category taxonomy awareness only
+    skills: [sql-injection, xss-analysis, command-injection]
+    note: NO payload dumps into AXGuard skills or rules
+
+  - name: nuclei-templates
+    org: projectdiscovery
+    url: https://github.com/projectdiscovery/nuclei-templates
+    license: MIT
+    stars: 12970
+    accessed: "2026-09-15"
+    use: fingerprint/coverage themes for cloud and misconfig classes
+    skills: [cloud-security, configuration-security]
+    note: do not copy templates wholesale
+
+  - name: semgrep
+    org: semgrep
+    url: https://github.com/semgrep/semgrep
+    license: LGPL-2.1
+    stars: 16641
+    accessed: "2026-09-15"
+    use: static-analysis workflow concepts
+    skills: [security-triage, sql-injection]
+
+  - name: codeql
+    org: github
+    url: https://github.com/github/codeql
+    license: MIT
+    stars: 10086
+    accessed: "2026-09-15"
+    use: taint/source-sink reasoning concepts
+    skills: [ssrf-analysis, sql-injection, command-injection]
+
+  - name: trivy
+    org: aquasecurity
+    url: https://github.com/aquasecurity/trivy
+    license: Apache-2.0
+    stars: 37910
+    accessed: "2026-09-15"
+    use: dependency and misconfig scanning methodology
+    skills: [supply-chain-security, configuration-security]
+
+  - name: zaproxy
+    org: zaproxy
+    url: https://github.com/zaproxy/zaproxy
+    license: Apache-2.0
+    stars: 15766
+    accessed: "2026-09-15"
+    use: DAST methodology concepts (authorized testing only)
+    skills: [api-security, xss-analysis]
+
+  - name: gosec
+    org: securego
+    url: https://github.com/securego/gosec
+    license: Apache-2.0
+    stars: 8945
+    accessed: "2026-09-15"
+    use: Go SAST rule-class inspiration
+    skills: [command-injection, secrets-detection]

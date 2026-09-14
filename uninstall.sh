@@ -7,7 +7,17 @@ AGENT="${AXGUARD_AGENT:-claude}"
 SCOPE="global"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SKILLS=(axguard-audit axguard-preship axguard-cso axguard-triage axguard-remediate axguard-report axguard-knowledge)
+SKILLS=(
+  axguard-audit axguard-preship axguard-cso axguard-triage axguard-remediate axguard-report axguard-knowledge
+  threat-modeling attack-surface-mapping security-architecture-review
+  authentication-analysis authorization-analysis session-security jwt-security oauth-security
+  api-security sql-injection xss-analysis ssrf-analysis ssti-analysis command-injection
+  path-traversal file-upload-security deserialization-security prototype-pollution
+  graphql-security websocket-security
+  secrets-detection cloud-security configuration-security supply-chain-security
+  ai-application-security prompt-injection ai-agent-security mcp-security
+  security-triage security-remediation
+)
 COMMANDS=(
   axguard-audit.md axguard-scan.md axguard-secrets.md axguard-auth.md
   axguard-inject.md axguard-ssrf.md axguard-xss.md axguard-cloud.md

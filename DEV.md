@@ -123,12 +123,13 @@ Full schema and examples: [docs/adding-rules.md](docs/adding-rules.md)
 **Command** — `commands/axguard-<name>.md`  
 Front matter `description:` becomes the agent help text. Keep steps concrete: run which CLI, which paths, what to output.
 
-**Skill** — `skills/axguard-<name>/SKILL.md`  
-YAML front matter: `name`, `description`. Description must say *when* to load the skill.
+**Skill** — `skills/axguard-<name>/SKILL.md` (orchestration) or `skills/security/<domain>/<name>/SKILL.md` (research-backed domain skill)  
+YAML front matter: `name`, `description`. Description must say *when* to load the skill. Domain skills follow [docs/SKILL-SCHEMA.md](docs/SKILL-SCHEMA.md) and must appear in [skills/index.yaml](skills/index.yaml).
 
 After adding files:
 
 ```bash
+python scripts/validate_skills.py
 ./install.sh --agent cursor --project   # or claude / all
 ```
 
@@ -140,11 +141,13 @@ Update `uninstall.sh` skill/command lists if you add new names.
 
 ```bash
 pytest -q
+python scripts/validate_skills.py
 pytest tests/test_scan.py -q
 pytest tests/test_audit_report.py -q
+pytest tests/test_skills.py -q
 ```
 
-CI runs the same suite via `.github/workflows/ci.yml` (needs a token with `workflow` scope when editing workflows).
+CI runs tests + skill validation via `.github/workflows/ci.yml` (needs a token with `workflow` scope when editing workflows).
 
 **Expectations**
 

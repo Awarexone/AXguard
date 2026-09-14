@@ -1,0 +1,159 @@
+# AXGuard skill registry (machine-readable)
+# last_updated: 2026-09-15
+
+version: "0.3.0-dev"
+skills:
+  # Orchestration (existing)
+  - name: axguard-audit
+    domain: operations
+    path: skills/axguard-audit/SKILL.md
+  - name: axguard-preship
+    domain: operations
+    path: skills/axguard-preship/SKILL.md
+  - name: axguard-cso
+    domain: operations
+    path: skills/axguard-cso/SKILL.md
+  - name: axguard-triage
+    domain: operations
+    path: skills/axguard-triage/SKILL.md
+  - name: axguard-remediate
+    domain: operations
+    path: skills/axguard-remediate/SKILL.md
+  - name: axguard-report
+    domain: operations
+    path: skills/axguard-report/SKILL.md
+  - name: axguard-knowledge
+    domain: operations
+    path: skills/axguard-knowledge/SKILL.md
+
+  # Domain skills — discovery (3)
+  - name: threat-modeling
+    domain: discovery
+    path: skills/security/discovery/threat-modeling/SKILL.md
+    related: [attack-surface-mapping, security-architecture-review, axguard-cso]
+  - name: attack-surface-mapping
+    domain: discovery
+    path: skills/security/discovery/attack-surface-mapping/SKILL.md
+    related: [threat-modeling, api-security]
+  - name: security-architecture-review
+    domain: discovery
+    path: skills/security/discovery/security-architecture-review/SKILL.md
+    related: [threat-modeling, authentication-analysis, authorization-analysis]
+
+  # Domain skills — identity (5)
+  - name: authentication-analysis
+    domain: identity
+    path: skills/security/identity/authentication-analysis/SKILL.md
+    related: [authorization-analysis, session-security, jwt-security, oauth-security]
+  - name: authorization-analysis
+    domain: identity
+    path: skills/security/identity/authorization-analysis/SKILL.md
+    related: [authentication-analysis, api-security, session-security]
+  - name: session-security
+    domain: identity
+    path: skills/security/identity/session-security/SKILL.md
+    related: [authentication-analysis, jwt-security]
+  - name: jwt-security
+    domain: identity
+    path: skills/security/identity/jwt-security/SKILL.md
+    related: [authentication-analysis, oauth-security, session-security]
+  - name: oauth-security
+    domain: identity
+    path: skills/security/identity/oauth-security/SKILL.md
+    related: [authentication-analysis, jwt-security]
+
+  # Domain skills — application (12)
+  - name: api-security
+    domain: application-security
+    path: skills/security/application/api-security/SKILL.md
+    related: [authorization-analysis, graphql-security, websocket-security]
+  - name: sql-injection
+    domain: application-security
+    path: skills/security/application/sql-injection/SKILL.md
+    related: [api-security, command-injection]
+  - name: xss-analysis
+    domain: application-security
+    path: skills/security/application/xss-analysis/SKILL.md
+    related: [api-security, ssti-analysis]
+  - name: ssrf-analysis
+    domain: application-security
+    path: skills/security/application/ssrf-analysis/SKILL.md
+    related: [cloud-security, api-security, secrets-detection]
+  - name: ssti-analysis
+    domain: application-security
+    path: skills/security/application/ssti-analysis/SKILL.md
+    related: [xss-analysis, command-injection]
+  - name: command-injection
+    domain: application-security
+    path: skills/security/application/command-injection/SKILL.md
+    related: [sql-injection, ai-agent-security]
+  - name: path-traversal
+    domain: application-security
+    path: skills/security/application/path-traversal/SKILL.md
+    related: [file-upload-security]
+  - name: file-upload-security
+    domain: application-security
+    path: skills/security/application/file-upload-security/SKILL.md
+    related: [path-traversal, xss-analysis]
+  - name: deserialization-security
+    domain: application-security
+    path: skills/security/application/deserialization-security/SKILL.md
+    related: [command-injection, prototype-pollution]
+  - name: prototype-pollution
+    domain: application-security
+    path: skills/security/application/prototype-pollution/SKILL.md
+    related: [deserialization-security, xss-analysis]
+  - name: graphql-security
+    domain: application-security
+    path: skills/security/application/graphql-security/SKILL.md
+    related: [api-security, authorization-analysis]
+  - name: websocket-security
+    domain: application-security
+    path: skills/security/application/websocket-security/SKILL.md
+    related: [api-security, authentication-analysis]
+
+  # Domain skills — infrastructure (4)
+  - name: secrets-detection
+    domain: infrastructure
+    path: skills/security/infrastructure/secrets-detection/SKILL.md
+    related: [supply-chain-security, cloud-security]
+  - name: cloud-security
+    domain: infrastructure
+    path: skills/security/infrastructure/cloud-security/SKILL.md
+    related: [ssrf-analysis, configuration-security, secrets-detection]
+  - name: configuration-security
+    domain: infrastructure
+    path: skills/security/infrastructure/configuration-security/SKILL.md
+    related: [cloud-security, secrets-detection]
+  - name: supply-chain-security
+    domain: infrastructure
+    path: skills/security/infrastructure/supply-chain-security/SKILL.md
+    related: [secrets-detection, mcp-security]
+
+  # Domain skills — ai (4)
+  - name: ai-application-security
+    domain: ai-security
+    path: skills/security/ai/ai-application-security/SKILL.md
+    related: [prompt-injection, ai-agent-security, mcp-security]
+  - name: prompt-injection
+    domain: ai-security
+    path: skills/security/ai/prompt-injection/SKILL.md
+    related: [ai-agent-security, mcp-security, ai-application-security]
+  - name: ai-agent-security
+    domain: ai-security
+    path: skills/security/ai/ai-agent-security/SKILL.md
+    related: [prompt-injection, mcp-security, command-injection]
+  - name: mcp-security
+    domain: ai-security
+    path: skills/security/ai/mcp-security/SKILL.md
+    related: [ai-agent-security, supply-chain-security, prompt-injection]
+
+  # Domain skills — operations (2)
+  - name: security-triage
+    domain: operations
+    path: skills/security/operations/security-triage/SKILL.md
+    related: [security-remediation, axguard-triage]
+  - name: security-remediation
+    domain: operations
+    path: skills/security/operations/security-remediation/SKILL.md
+    related: [security-triage, axguard-remediate]
