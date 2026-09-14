@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from engines.app_model import build_application_model, write_application_model
 from engines.paths import default_rules_dir
 from engines.scanner import ScanOptions, run_scan
 
@@ -69,6 +70,10 @@ def run_audit(options: AuditOptions) -> dict:
 
     selected = options.phases or [p for p, _ in AUDIT_PHASES]
     phase_results = []
+    application_model: dict | None = None
+    application_model_summary: dict | None = None
+    application_model_paths: dict | None = None
+
     for phase_id, label in AUDIT_PHASES:
         if phase_id not in selected and phase_id != "report":
             continue
@@ -77,15 +82,32 @@ def run_audit(options: AuditOptions) -> dict:
         else:
             prefix = PHASE_RULE_PREFIX.get(phase_id, "")
             phase_findings = [f for f in findings if str(f.get("id", "")).startswith(prefix)]
-        phase_results.append(
-            {
-                "id": phase_id,
-                "label": label,
-                "status": "ok",
-                "finding_count": len(phase_findings),
-                "findings": phase_findings,
-            }
-        )
+
+        phase_entry: dict = {
+            "id": phase_id,
+            "label": label,
+            "status": "ok",
+            "finding_count": len(phase_findings),
+            "findings": phase_findings,
+        }
+
+        if phase_id == "surface":
+            try:
+                application_model = build_application_model(options.target)
+                application_model_summary = dict(application_model.get("summary") or {})
+                application_model_paths = write_application_model(application_model, out_dir)
+                phase_entry["application_model_summary"] = application_model_summary
+                phase_entry["status"] = "ok"
+            except Exception as exc:  # noqa: BLE001 — never fail audit on surface model
+                phase_entry["status"] = "error"
+                phase_entry["error"] = str(exc)
+                phase_entry["application_model_summary"] = {
+                    "endpoint_count": 0,
+                    "sink_count": 0,
+                    "frameworks": [],
+                }
+
+        phase_results.append(phase_entry)
 
     counts = _severity_counts(findings)
     finished = datetime.now(timezone.utc)
@@ -103,6 +125,12 @@ def run_audit(options: AuditOptions) -> dict:
         "findings": findings,
         "out_dir": str(out_dir),
     }
+    if application_model is not None:
+        result["application_model"] = application_model
+    if application_model_summary is not None:
+        result["application_model_summary"] = application_model_summary
+    if application_model_paths is not None:
+        result["application_model_paths"] = application_model_paths
     return result
 
 

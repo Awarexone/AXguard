@@ -27,8 +27,15 @@ def test_audit_writes_md_and_html(tmp_path: Path):
     md = paths["md"].read_text(encoding="utf-8")
     html = paths["html"].read_text(encoding="utf-8")
     assert "Severity summary" in md
+    assert "Application understanding" in md
     assert "AXguard" in html
     assert "Security audit report" in html
+    assert result.get("application_model_summary") is not None
+    surface = next(p for p in result["phases"] if p["id"] == "surface")
+    assert surface["status"] in {"ok", "error"}
+    assert "application_model_summary" in surface
+    assert (tmp_path / "application-model.json").exists()
+    assert (tmp_path / "application-model.md").exists()
 
 
 def test_markdown_and_html_renderers(tmp_path: Path):

@@ -6,11 +6,12 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 
 | Package / path | Responsibility |
 |---|---|
-| `cli/main.py` | Argparse UI: `scan`, `audit`, `help`, `version` |
+| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `help`, `version` |
 | `engines/scanner.py` | Orchestrates one scan pass |
 | `engines/rules_loader.py` | Loads `rules/*.json` (and a narrow YAML subset) |
 | `engines/source_scan.py` | Walks the tree, applies regex rules, builds findings |
 | `engines/audit.py` | A→Z phases + severity counts around a scan |
+| `engines/app_model/` | Application understanding + attack-surface graph (`axguard surface`) |
 | `engines/report.py` | text / json / markdown / HTML renderers + `write_reports` |
 | `engines/banner.py` | ASCII branding |
 | `engines/paths.py` | Resolves package root + default `rules/` |
@@ -59,7 +60,7 @@ sort by severity, then file/line
 
 ## Audit phases
 
-Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. They do not run separate engines yet — they structure the report and agent workflow.
+Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface` / `report` bookends. The `surface` phase builds an application model via `engines/app_model` (routes, sinks, stack) and writes `application-model.json` / `.md` alongside reports; other phases still structure findings by rule prefix.
 
 ## Reports
 
@@ -74,10 +75,11 @@ Phases are labels over rule id prefixes (`secrets.`, `auth.`, …) plus `surface
 
 ## Extensibility points
 
-1. **New regex pack** — drop JSON in `rules/` (see [adding-rules.md](adding-rules.md))  
-2. **New engine** — e.g. bundle/WASM walker; call from `run_scan` / `run_audit`  
-3. **New agent surface** — `commands/` + `skills/` + install/uninstall lists  
-4. **CI gate** — `axguard audit . --fail-on high`  
+1. **New regex pack** — drop JSON in `rules/` (see [adding-rules.md](adding-rules.md))
+2. **New engine** — e.g. bundle/WASM walker; call from `run_scan` / `run_audit`
+3. **Application model adapters** — extend `engines/app_model/adapters/` for new frameworks; `axguard surface` and the audit `surface` phase consume the shared model
+4. **New agent surface** — `commands/` + `skills/` + install/uninstall lists
+5. **CI gate** — `axguard audit . --fail-on high`
 
 ## Design constraints
 
