@@ -93,6 +93,8 @@ def run_audit(options: AuditOptions) -> dict:
     attack_graph_result: dict | None = None
     attack_graph_summary: dict | None = None
     attack_graph_paths: dict | None = None
+    twin_summary: dict | None = None
+    security_twin: dict | None = None
 
     for phase_id, label in AUDIT_PHASES:
         if phase_id not in selected and phase_id != "report":
@@ -195,6 +197,29 @@ def run_audit(options: AuditOptions) -> dict:
                             attack_graph_result, out_dir
                         )
                         phase_entry["attack_graph_summary"] = attack_graph_summary
+                        # Soft-wire Security Twin summary (never fail audit)
+                        try:
+                            from engines.twin import build_security_twin
+
+                            twin = build_security_twin(
+                                options.target,
+                                attack_graph=attack_graph_result,
+                                application_model=application_model,
+                            )
+                            twin_summary = dict(twin.get("summary") or {})
+                            security_twin = {
+                                "schema_version": twin.get("schema_version"),
+                                "summary": twin_summary,
+                                "entity_count": twin_summary.get("entity_count", 0),
+                                "relationship_count": twin_summary.get(
+                                    "relationship_count", 0
+                                ),
+                                "disclaimer": twin.get("disclaimer"),
+                            }
+                            phase_entry["twin_summary"] = twin_summary
+                        except Exception as twin_exc:  # noqa: BLE001
+                            phase_entry["twin_status"] = "error"
+                            phase_entry["twin_error"] = str(twin_exc)
                 except Exception as ag_exc:  # noqa: BLE001
                     phase_entry["attack_graph_status"] = "error"
                     phase_entry["attack_graph_error"] = str(ag_exc)
@@ -282,6 +307,10 @@ def run_audit(options: AuditOptions) -> dict:
         result["attack_graph_summary"] = attack_graph_summary
     if attack_graph_paths is not None:
         result["attack_graph_paths"] = attack_graph_paths
+    if twin_summary is not None:
+        result["twin_summary"] = twin_summary
+    if security_twin is not None:
+        result["security_twin"] = security_twin
 
     # Soft Security Memory — never fail audit on memory errors
     try:

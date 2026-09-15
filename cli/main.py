@@ -263,6 +263,149 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Force EVALUATION_ONLY instead of public TRAINING approval",
             )
 
+    twin_cmd = sub.add_parser(
+        "twin",
+        help="Security Twin — symbolic model over attack-graph artifacts (no network)",
+    )
+    twin_sub = twin_cmd.add_subparsers(dest="twin_command", required=True)
+
+    def _twin_common(p: argparse.ArgumentParser, *, with_path: bool = True) -> None:
+        if with_path:
+            p.add_argument("path", nargs="?", default=".", help="Target path (default: .)")
+        p.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+        p.add_argument(
+            "--no-engage",
+            action="store_true",
+            help="Skip contextual engagement messages",
+        )
+
+    twin_build = twin_sub.add_parser("build", help="Build Security Twin and write artifacts")
+    _twin_common(twin_build)
+    twin_build.add_argument(
+        "--out-dir",
+        default=".findings/axguard/twin",
+        help="Artifact directory (default: .findings/axguard/twin)",
+    )
+    twin_build.add_argument(
+        "--no-simulate",
+        action="store_true",
+        help="Skip attack-path simulation",
+    )
+    twin_build.add_argument(
+        "--profile",
+        default="PUBLIC_USER",
+        help="Virtual attacker profile (default: PUBLIC_USER)",
+    )
+
+    twin_show = twin_sub.add_parser("show", help="Build twin and print summary")
+    _twin_common(twin_show)
+    twin_show.add_argument(
+        "--out-dir",
+        default=".findings/axguard/twin",
+        help="Artifact directory (default: .findings/axguard/twin)",
+    )
+    twin_show.add_argument(
+        "--profile",
+        default="PUBLIC_USER",
+        help="Virtual attacker profile (default: PUBLIC_USER)",
+    )
+
+    twin_attack = twin_sub.add_parser(
+        "attack", help="Symbolic attack simulation from twin"
+    )
+    _twin_common(twin_attack)
+    twin_attack.add_argument(
+        "--profile",
+        default="PUBLIC_USER",
+        help="Virtual attacker profile (default: PUBLIC_USER)",
+    )
+
+    twin_blast = twin_sub.add_parser(
+        "blast-radius", help="Entity blast radius from twin"
+    )
+    _twin_common(twin_blast)
+    twin_blast.add_argument(
+        "--entity",
+        required=True,
+        help="Entity id (or resolvable label)",
+    )
+
+    twin_controls = twin_sub.add_parser(
+        "controls", help="Control effectiveness analysis"
+    )
+    _twin_common(twin_controls)
+
+    twin_whatif = twin_sub.add_parser(
+        "what-if", help="Counterfactual / what-if analysis"
+    )
+    _twin_common(twin_whatif)
+    twin_whatif.add_argument("--scenario", default=None, help="Scenario key")
+    twin_whatif.add_argument(
+        "--remove-control",
+        default=None,
+        help="Control id to hypothetically remove",
+    )
+    twin_whatif.add_argument(
+        "--grant-agent-tool",
+        default=None,
+        help="Tool name to hypothetically grant an agent",
+    )
+
+    twin_compare = twin_sub.add_parser(
+        "compare", help="Compare two twin JSON artifacts"
+    )
+    _twin_common(twin_compare, with_path=False)
+    twin_compare.add_argument(
+        "--before",
+        required=True,
+        help="Path to before security-twin.json",
+    )
+    twin_compare.add_argument(
+        "--after",
+        required=True,
+        help="Path to after security-twin.json",
+    )
+
+    twin_reg = twin_sub.add_parser(
+        "regression",
+        help="Regression between two dirs (build) or twin JSON files",
+    )
+    _twin_common(twin_reg, with_path=False)
+    twin_reg.add_argument(
+        "--before",
+        required=True,
+        help="Before target directory or twin JSON",
+    )
+    twin_reg.add_argument(
+        "--after",
+        required=True,
+        help="After target directory or twin JSON",
+    )
+
+    twin_query = twin_sub.add_parser("query", help="Deterministic Q/A over a twin")
+    _twin_common(twin_query)
+    twin_query.add_argument(
+        "--question",
+        required=True,
+        help="Natural-language question (keyword-matched)",
+    )
+
+    twin_scenarios = twin_sub.add_parser(
+        "scenarios", help="List Security Twin scenario templates"
+    )
+    _twin_common(twin_scenarios, with_path=False)
+
+    twin_export = twin_sub.add_parser(
+        "export-dataset",
+        help="Export EVALUATION_ONLY Q/A examples from a twin",
+    )
+    _twin_common(twin_export)
+    twin_export.add_argument(
+        "--out-dir",
+        default=".findings/axguard/twin",
+        help="Artifact directory (default: .findings/axguard/twin)",
+    )
+
     memory_cmd = sub.add_parser(
         "memory",
         help="Security Memory — longitudinal findings/controls/paths",
@@ -397,8 +540,9 @@ AXguard — start with the workflow you need
   False Positive Adversary        axguard adversary .  |  /axguard-adversary
   Evidence & Confidence engine    axguard evidence .  |  /axguard-evidence
   Attack graph / vuln chaining    axguard paths .   |  /axguard-paths
-  Security Memory (longitudinal)  axguard memory …  |  /axguard-memory
   Training-data pipeline          axguard data …    |  /axguard-data
+  Security Twin (symbolic)        axguard twin …    |  docs/twin/README.md
+  Security Memory (longitudinal)  axguard memory …  |  docs/memory/README.md
   About AXGuard                   axguard about
   Engagement prefs                axguard engage disable | enable | dismiss
   First look at a new codebase    /axguard-threat-model → /axguard-audit
@@ -515,6 +659,7 @@ def main(argv: list[str] | None = None) -> int:
         "paths",
         "attack-paths",
         "data",
+        "twin",
         "memory",
     } and not getattr(args, "no_banner", False):
         print_banner()
@@ -867,6 +1012,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "data":
         return _run_data_command(args)
 
+    if args.command == "twin":
+        return _run_twin_command(args)
+
     if args.command == "memory":
         return _run_memory_command(args)
 
@@ -1021,6 +1169,207 @@ def _run_memory_command(args: argparse.Namespace) -> int:
 
     print(f"error: unknown memory command: {action}", file=sys.stderr)
     return 2
+
+def _run_twin_command(args: argparse.Namespace) -> int:
+    """Security Twin CLI — local symbolic analysis only (never network)."""
+    import json as _json
+
+    from engines.twin import (
+        answer_query,
+        build_security_twin,
+        control_effectiveness,
+        entity_blast_radius,
+        export_twin_examples,
+        list_scenarios,
+        run_twin,
+        run_twin_compare,
+        run_twin_what_if,
+        simulate_attack,
+        twin_regression,
+        write_twin_report,
+    )
+
+    action = args.twin_command
+
+    def _load_twin_payload(path: Path) -> dict:
+        """Load a twin dict from JSON report or build from a directory."""
+        if path.is_file():
+            data = _json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and isinstance(data.get("twin"), dict):
+                return data["twin"]
+            if isinstance(data, dict):
+                return data
+            raise ValueError(f"not a twin JSON object: {path}")
+        return build_security_twin(path)
+
+    try:
+        if action == "scenarios":
+            for sc in list_scenarios():
+                key = sc.get("key", "?")
+                title = sc.get("title", "")
+                theme = sc.get("theme", "")
+                print(f"  {key:28} {title}  [{theme}]")
+            return 0
+
+        if action == "compare":
+            before = _load_twin_payload(Path(args.before).resolve())
+            after = _load_twin_payload(Path(args.after).resolve())
+            result = run_twin_compare(before, after)
+            reg = result.get("regression") or {}
+            print("twin compare")
+            print(f"  changes   {len(reg.get('changes') or [])}")
+            for c in (reg.get("changes") or [])[:12]:
+                ctype = c.get("change_type") or c.get("type") or c.get("kind") or "?"
+                print(f"  - {ctype}: {c.get('id') or c.get('description') or c}")
+            print(_json.dumps({"regression_summary": reg.get("summary") or reg}, indent=2, default=str))
+            return 0
+
+        if action == "regression":
+            before = _load_twin_payload(Path(args.before).resolve())
+            after = _load_twin_payload(Path(args.after).resolve())
+            reg = twin_regression(before, after)
+            print("twin regression")
+            print(f"  changes   {len(reg.get('changes') or [])}")
+            for c in (reg.get("changes") or [])[:12]:
+                ctype = c.get("change_type") or c.get("type") or c.get("kind") or "?"
+                print(f"  - {ctype}: {c.get('id') or c.get('description') or c}")
+            if reg.get("summary"):
+                print(_json.dumps(reg["summary"], indent=2, default=str))
+            return 0
+
+        target = Path(getattr(args, "path", ".")).resolve()
+        if action != "scenarios" and not target.exists():
+            print(f"error: path not found: {target}", file=sys.stderr)
+            return 2
+
+        if action == "build":
+            out_dir = Path(args.out_dir)
+            result = run_twin(
+                target,
+                simulate=not getattr(args, "no_simulate", False),
+                controls=True,
+                attacker_profile=getattr(args, "profile", "PUBLIC_USER"),
+                write_report=out_dir,
+            )
+            twin = result.get("twin") or {}
+            summary = twin.get("summary") or {}
+            # run_twin already wrote via write_report=out_dir
+            print("twin build complete (symbolic — no network)")
+            print(f"  entities     {summary.get('entity_count', 0)}")
+            print(f"  relationships {summary.get('relationship_count', 0)}")
+            print(f"  paths        {summary.get('attack_graph_path_count', 0)}")
+            print(f"  controls     {summary.get('control_count', 0)}")
+            print(f"  json         {out_dir / 'security-twin.json'}")
+            print(f"  md           {out_dir / 'security-twin.md'}")
+            print(f"  html         {out_dir / 'security-twin.html'}")
+            return 0
+
+        if action == "show":
+            out_dir = Path(args.out_dir)
+            result = run_twin(
+                target,
+                simulate=True,
+                controls=True,
+                attacker_profile=getattr(args, "profile", "PUBLIC_USER"),
+                write_report=out_dir,
+            )
+            twin = result.get("twin") or {}
+            summary = twin.get("summary") or {}
+            print("twin summary")
+            for k, v in sorted(summary.items()):
+                print(f"  {k:28} {v}")
+            sim = result.get("simulation") or {}
+            print(f"  observed_paths             {len(sim.get('observed_paths') or [])}")
+            print(f"  simulated_paths            {len(sim.get('simulated_paths') or [])}")
+            print(f"  controls_analyzed          {len(result.get('controls') or [])}")
+            return 0
+
+        if action == "attack":
+            twin = build_security_twin(target)
+            sim = simulate_attack(
+                twin, attacker_profile=getattr(args, "profile", "PUBLIC_USER")
+            )
+            print(f"twin attack [{getattr(args, 'profile', 'PUBLIC_USER')}]")
+            print(f"  observed   {len(sim.get('observed_paths') or [])}")
+            print(f"  simulated  {len(sim.get('simulated_paths') or [])}")
+            for p in (sim.get("observed_paths") or [])[:6]:
+                print(f"  - OBS {p.get('path_id') or p.get('id')}: {p.get('status')}")
+            for p in (sim.get("simulated_paths") or [])[:6]:
+                print(f"  - SIM {p.get('path_id') or p.get('id')}: {p.get('status')}")
+            return 0
+
+        if action == "blast-radius":
+            twin = build_security_twin(target)
+            blast = entity_blast_radius(twin, args.entity)
+            raw = blast.get("blast") or {}
+            print(f"twin blast-radius [{blast.get('entity_id')}]")
+            print(f"  exists           {raw.get('exists')}")
+            print(f"  node_count       {raw.get('node_count', 0)}")
+            print(f"  max_sensitivity  {raw.get('max_sensitivity')}")
+            for imp in (blast.get("impact_classifications") or [])[:8]:
+                print(f"  - {imp.get('impact') or imp.get('class')}: {imp.get('id') or imp}")
+            return 0
+
+        if action == "controls":
+            twin = build_security_twin(target)
+            controls = control_effectiveness(twin)
+            print(f"twin controls ({len(controls)})")
+            for c in controls[:15]:
+                prot = c.get("protected_path_count", {})
+                exp = c.get("paths_exposed_if_removed", {})
+                pv = prot.get("value", prot) if isinstance(prot, dict) else prot
+                ev = exp.get("value", exp) if isinstance(exp, dict) else exp
+                print(f"  - {c.get('control_id')}: protected={pv} exposed_if_removed={ev}")
+            return 0
+
+        if action == "what-if":
+            result = run_twin_what_if(
+                target,
+                scenario=getattr(args, "scenario", None),
+                remove_control=getattr(args, "remove_control", None),
+                grant_agent_tool=getattr(args, "grant_agent_tool", None),
+            )
+            cf = result.get("counterfactual") or {}
+            sc = cf.get("scenario")
+            sc_label = sc.get("value", sc) if isinstance(sc, dict) else (sc or "custom")
+            print(f"twin what-if [{sc_label}]")
+            print(f"  assumptions         {len(cf.get('assumptions') or [])}")
+            print(f"  simulated_paths     {len(cf.get('simulated_paths') or [])}")
+            print(f"  layer               SIMULATED (not OBSERVED findings)")
+            for p in (cf.get("simulated_paths") or [])[:8]:
+                premise = p.get("premise") or {}
+                pv = premise.get("value", premise) if isinstance(premise, dict) else premise
+                print(f"  - {p.get('title') or p.get('id')}: {pv}")
+            if cf.get("disclaimer"):
+                print(f"  note: {cf['disclaimer']}")
+            return 0
+
+        if action == "query":
+            twin = build_security_twin(target)
+            ans = answer_query(twin, args.question)
+            print(f"twin query [{ans.get('intent')}]")
+            print(_json.dumps(ans.get("answer") or ans, indent=2, default=str))
+            return 0
+
+        if action == "export-dataset":
+            out_dir = Path(args.out_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            twin = build_security_twin(target)
+            examples = export_twin_examples(twin)
+            out_path = out_dir / "twin-examples.json"
+            out_path.write_text(
+                _json.dumps(examples, indent=2, default=str) + "\n", encoding="utf-8"
+            )
+            print("twin export-dataset (EVALUATION_ONLY)")
+            print(f"  examples  {len(examples)}")
+            print(f"  json      {out_path}")
+            return 0
+
+        print(f"error: unknown twin command: {action}", file=sys.stderr)
+        return 2
+    except Exception as exc:  # noqa: BLE001 — never network; soft-fail CLI
+        print(f"error: twin {action} failed: {exc}", file=sys.stderr)
+        return 2
 
 
 def _run_data_command(args: argparse.Namespace) -> int:
