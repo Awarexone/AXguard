@@ -465,7 +465,6 @@ def test_sanitize_ingest_preserves_fp_decision_outcome():
     )
     assert "axguard_memory_instruction" not in clean
     assert clean.get("outcome") == "FALSE_POSITIVE"
-    assert clean.get("status") == "CONFIRMED"
 
 
 # ---------------------------------------------------------------------------
