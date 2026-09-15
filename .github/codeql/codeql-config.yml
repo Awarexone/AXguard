@@ -1,0 +1,6 @@
+name: AXGuard CodeQL config
+
+# Intentional insecure fixtures / tests are for AXGuard self-tests.
+paths-ignore:
+  - fixtures/**
+  - tests/**
