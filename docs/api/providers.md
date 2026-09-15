@@ -1,33 +1,13 @@
-# AI providers (BYOK / local / none)
+# AI Providers (local / BYOK)
 
-AXGuard ships **no hosted model**. Default is deterministic `no-llm`.
+AXGuard has **no hosted model**.
 
-```bash
-# Offline (default)
-export AXGUARD_AI_MODE=no-llm
+| Env | Purpose |
+|---|---|
+| `AXGUARD_AI_MODE` | `no-llm` (default), `local`, `user_key` |
+| `AXGUARD_AI_PROVIDER` | `none`, `ollama`, `openai`, `anthropic`, `groq`, … |
+| `AXGUARD_AI_API_KEY` | Your key (never logged) |
+| `AXGUARD_AI_BASE_URL` | OpenAI-compatible or Anthropic base URL |
+| `AXGUARD_AI_MODEL` | Model id |
 
-# Ollama
-export AXGUARD_AI_MODE=local
-export AXGUARD_AI_PROVIDER=ollama
-export AXGUARD_AI_BASE_URL=http://127.0.0.1:11434/v1
-export AXGUARD_AI_MODEL=llama3.2
-
-# OpenAI BYOK
-export AXGUARD_AI_MODE=user_key
-export AXGUARD_AI_PROVIDER=openai
-export AXGUARD_AI_API_KEY=sk-...
-export AXGUARD_AI_MODEL=gpt-4.1-mini
-
-# Anthropic BYOK
-export AXGUARD_AI_MODE=user_key
-export AXGUARD_AI_PROVIDER=anthropic
-export AXGUARD_AI_API_KEY=sk-ant-...
-
-# OpenAI-compatible (Groq, DeepSeek, Together, Mistral, Cerebras, …)
-export AXGUARD_AI_MODE=user_key
-export AXGUARD_AI_PROVIDER=openai_compat
-export AXGUARD_AI_BASE_URL=https://api.groq.com/openai/v1
-export AXGUARD_AI_API_KEY=...
-```
-
-Scan body `enrichment`: `none` (default) | `auto` | `llm` (422 if no provider configured).
+`enrichment=llm` returns **422** unless a real local/BYOK provider is configured. `NoneProvider` is valid for no-llm (`available=True`) but still rejected for enrichment.

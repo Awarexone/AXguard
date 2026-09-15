@@ -16,6 +16,7 @@
 | Investigation Agent | `axguard investigate …` |
 | GitHub Security Bot | `axguard github setup\|validate\|test\|status` |
 | Predictive Security | `axguard predict …` |
+| Local Security Intelligence API | `axguard api start` → `http://127.0.0.1:8787` |
 | Training-data pipeline | `/axguard-data` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
@@ -98,6 +99,7 @@ axguard github setup . # GitHub Security Bot — see docs/github/README.md
 axguard github validate .
 axguard github test .
 axguard github status .
+axguard api start      # Local API — docs/api/overview.md
 axguard predict .      # Predictive security — see docs/predictive/README.md
 axguard predict --pr --base ./base
 axguard predict --architecture
