@@ -13,6 +13,7 @@
 | Evidence & Confidence | `/axguard-evidence` |
 | Attack graph / vuln chaining | `/axguard-paths` |
 | Security Memory | `axguard memory …` |
+| Investigation Agent | `axguard investigate …` |
 | Training-data pipeline | `/axguard-data` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
@@ -60,6 +61,7 @@
 .findings/axguard/attack-paths.json
 .findings/axguard/attack-paths.md
 .findings/axguard/memory/
+.findings/axguard/investigation/
 .findings/axguard/data/data-pipeline.json
 .findings/axguard/data/data-pipeline.md
 .findings/axguard/data/data-pipeline.html
@@ -80,6 +82,10 @@ axguard adversary .
 axguard evidence .
 axguard paths .   # alias: axguard attack-paths .
 axguard memory record .
+axguard investigate . --fast
+axguard investigate . --deep
+axguard investigate . --finding FINDING_ID
+axguard investigate --explain FINDING_ID
 axguard about
 axguard engage disable
 axguard data discover

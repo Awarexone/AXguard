@@ -510,6 +510,72 @@ def build_parser() -> argparse.ArgumentParser:
         help='Natural-language question (e.g. "what changed")',
     )
 
+    inv_cmd = sub.add_parser(
+        "investigate",
+        help="Investigation Agent — evidence-driven candidate investigation",
+    )
+    inv_cmd.add_argument(
+        "path",
+        nargs="?",
+        default=".",
+        help="Target path or audit/adversary JSON (default: .)",
+    )
+    inv_cmd.add_argument(
+        "--finding",
+        default=None,
+        help="Investigate a single finding / candidate id",
+    )
+    inv_cmd.add_argument(
+        "--explain",
+        default=None,
+        metavar="FINDING_ID",
+        help="Explain an investigation for FINDING_ID (uses --out-dir artifacts when present)",
+    )
+    inv_budget = inv_cmd.add_mutually_exclusive_group()
+    inv_budget.add_argument(
+        "--fast",
+        action="store_true",
+        help="FAST budget — limited actions",
+    )
+    inv_budget.add_argument(
+        "--deep",
+        action="store_true",
+        help="DEEP budget — broader evidence collection",
+    )
+    inv_cmd.add_argument(
+        "--budget",
+        choices=("FAST", "BALANCED", "DEEP"),
+        default=None,
+        help="Investigation budget (default: BALANCED)",
+    )
+    inv_cmd.add_argument(
+        "--out-dir",
+        default=".findings/axguard/investigation",
+        help="Artifact directory (default: .findings/axguard/investigation)",
+    )
+    inv_cmd.add_argument(
+        "--memory-dir",
+        default=".findings/axguard/memory",
+        help="Security Memory directory for reuse/invalidation",
+    )
+    inv_cmd.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Print investigation JSON to stdout",
+    )
+    inv_cmd.add_argument(
+        "--no-twin",
+        action="store_true",
+        help="Skip Security Twin soft integration",
+    )
+    inv_cmd.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+    inv_cmd.add_argument(
+        "--no-engage",
+        action="store_true",
+        help="Skip engagement / first-run messaging",
+    )
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
 
@@ -524,6 +590,61 @@ def build_parser() -> argparse.ArgumentParser:
     engage_sub.add_parser("disable", help="Disable promotional / support messaging")
     engage_sub.add_parser("enable", help="Re-enable promotional messaging")
     engage_sub.add_parser("dismiss", help="Dismiss the latest support ask (cooldown)")
+
+    github_cmd = sub.add_parser(
+        "github",
+        help="GitHub Security Bot — setup / validate / test / status",
+    )
+    github_sub = github_cmd.add_subparsers(dest="github_command", required=True)
+
+    gh_setup = github_sub.add_parser(
+        "setup",
+        help="Print App setup steps and write example .axguard.yml",
+    )
+    gh_setup.add_argument(
+        "path", nargs="?", default=".", help="Project path (default: .)"
+    )
+    gh_setup.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing .axguard.yml with the example",
+    )
+    gh_setup.add_argument(
+        "--no-write",
+        action="store_true",
+        help="Print steps only; do not write .axguard.yml",
+    )
+    gh_setup.add_argument("--no-banner", action="store_true")
+
+    def _gh_common(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "path", nargs="?", default=".", help="Project path (default: .)"
+        )
+        p.add_argument(
+            "--config",
+            default=None,
+            help="Path to .axguard.yml (default: search upward from path)",
+        )
+        p.add_argument("--no-banner", action="store_true")
+
+    _gh_common(
+        github_sub.add_parser(
+            "validate",
+            help="Validate .axguard.yml + credential env presence (no API call)",
+        )
+    )
+    _gh_common(
+        github_sub.add_parser(
+            "test",
+            help="Local dry-run (config + optional webhook HMAC self-check)",
+        )
+    )
+    _gh_common(
+        github_sub.add_parser(
+            "status",
+            help="Show adapter/config status (secrets redacted)",
+        )
+    )
     return parser
 
 
@@ -543,6 +664,8 @@ AXguard — start with the workflow you need
   Training-data pipeline          axguard data …    |  /axguard-data
   Security Twin (symbolic)        axguard twin …    |  docs/twin/README.md
   Security Memory (longitudinal)  axguard memory …  |  docs/memory/README.md
+  Investigation Agent             axguard investigate …  |  docs/investigation/README.md
+  GitHub Security Bot             axguard github …  |  docs/github/README.md
   About AXGuard                   axguard about
   Engagement prefs                axguard engage disable | enable | dismiss
   First look at a new codebase    /axguard-threat-model → /axguard-audit
@@ -648,6 +771,12 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         return 0
 
+    if args.command == "github":
+        if not getattr(args, "no_banner", False):
+            print_banner()
+            print()
+        return _run_github_command(args)
+
     if args.command in {
         "scan",
         "audit",
@@ -661,6 +790,7 @@ def main(argv: list[str] | None = None) -> int:
         "data",
         "twin",
         "memory",
+        "investigate",
     } and not getattr(args, "no_banner", False):
         print_banner()
         print()
@@ -1018,8 +1148,134 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "memory":
         return _run_memory_command(args)
 
+    if args.command == "investigate":
+        return _run_investigate_command(args)
+
     parser.print_help()
     return 2
+
+
+def _run_github_command(args: argparse.Namespace) -> int:
+    """GitHub Security Bot CLI — thin wrappers over engines.github."""
+    action = getattr(args, "github_command", None)
+    try:
+        from engines.github.cli import run_github_command
+    except ImportError as exc:
+        print(
+            f"error: GitHub adapter CLI unavailable ({exc}). "
+            "See docs/github/README.md",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        return int(run_github_command(action, args))
+    except Exception as exc:  # noqa: BLE001
+        print(f"error: github {action} failed: {exc}", file=sys.stderr)
+        return 2
+
+
+def _run_investigate_command(args: argparse.Namespace) -> int:
+    """Investigation Agent CLI — orchestrate evidence-driven investigation."""
+    import json as _json
+
+    from engines.investigation import (
+        explain_investigation,
+        find_investigation,
+        render_investigation_markdown,
+        run_investigation,
+    )
+
+    out_dir = Path(args.out_dir)
+    budget = getattr(args, "budget", None)
+    if getattr(args, "fast", False):
+        budget = "FAST"
+    elif getattr(args, "deep", False):
+        budget = "DEEP"
+    elif not budget:
+        budget = "BALANCED"
+
+    explain_id = getattr(args, "explain", None)
+    if explain_id:
+        # Prefer existing JSON artifact; else run a focused investigation
+        artifact = out_dir / "investigation.json"
+        result = None
+        if artifact.is_file():
+            try:
+                result = _json.loads(artifact.read_text(encoding="utf-8"))
+            except (OSError, _json.JSONDecodeError):
+                result = None
+        if not isinstance(result, dict):
+            target = Path(args.path)
+            result = run_investigation(
+                target,
+                finding_id=explain_id,
+                budget=budget,
+                memory_dir=Path(args.memory_dir),
+                out_dir=out_dir,
+                write_report=True,
+                parallel=False,
+                with_twin=not getattr(args, "no_twin", False),
+            )
+        inv = find_investigation(result, explain_id)
+        if inv is None and (result.get("investigations") or []):
+            inv = result["investigations"][0]
+        if inv is None:
+            print(f"error: no investigation for: {explain_id}", file=sys.stderr)
+            return 2
+        print(explain_investigation(inv))
+        return 0
+
+    target = Path(args.path)
+    source: Path | dict
+    if target.is_file() and target.suffix.lower() == ".json":
+        try:
+            payload = _json.loads(target.read_text(encoding="utf-8"))
+        except (OSError, _json.JSONDecodeError) as exc:
+            print(f"error: cannot load JSON: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(payload, dict):
+            print("error: JSON root must be an object", file=sys.stderr)
+            return 2
+        source = payload
+    else:
+        source = target.resolve()
+        if not source.exists():
+            print(f"error: path not found: {source}", file=sys.stderr)
+            return 2
+
+    result = run_investigation(
+        source,
+        finding_id=getattr(args, "finding", None),
+        budget=budget,
+        memory_dir=Path(args.memory_dir),
+        out_dir=out_dir,
+        write_report=True,
+        with_twin=not getattr(args, "no_twin", False),
+    )
+
+    if getattr(args, "as_json", False):
+        print(_json.dumps(result, indent=2, default=str))
+        return 0
+
+    summary = result.get("summary") or {}
+    print("investigation complete")
+    print(f"  target          {result.get('target')}")
+    print(f"  budget          {result.get('budget')}")
+    print(f"  investigations  {summary.get('investigation_count', 0)}")
+    print(f"  verified        {summary.get('verified', 0)}")
+    print(f"  likely          {summary.get('likely', 0)}")
+    print(f"  false_positive  {summary.get('false_positive', 0)}")
+    print(f"  unverified      {summary.get('unverified', 0)}")
+    print(f"  requires_review {summary.get('requires_review', 0)}")
+    report = result.get("report") or {}
+    if report.get("markdown"):
+        print(f"  md              {report['markdown']}")
+    if report.get("json"):
+        print(f"  json            {report['json']}")
+    # Short markdown digest for humans
+    print()
+    print(render_investigation_markdown(result))
+    return 0
 
 
 def _run_memory_command(args: argparse.Namespace) -> int:
