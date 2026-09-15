@@ -47,3 +47,9 @@ git push -u origin HEAD
 ## License
 
 By contributing you agree your changes are licensed under the MIT License (`LICENSE`).
+
+## Contact
+
+- General: [hello@awarexone.com](mailto:hello@awarexone.com)
+- Business / B2B: [b2b@awarexone.com](mailto:b2b@awarexone.com)
+- Founder: [shuvon@awarexone.com](mailto:shuvon@awarexone.com)
