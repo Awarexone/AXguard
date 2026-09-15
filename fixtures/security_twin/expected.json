@@ -1,0 +1,32 @@
+{
+  "notes": "Golden expectations for Security Twin built from fixtures/attack_paths_app. Counts derived from a live build_security_twin run; prefer stable summary fields over timestamps or generated_at.",
+  "fixture": "attack_paths_app",
+  "schema_version": "1.0.0",
+  "tool": "axguard",
+  "summary": {
+    "entity_count": 48,
+    "relationship_count": 70,
+    "observed_path_count": 6,
+    "simulated_path_count": 0,
+    "blocked_path_count": 1,
+    "control_count": 7,
+    "ai_agent_count": 1,
+    "ai_tool_count": 1,
+    "mcp_server_count": 0,
+    "secret_count": 4,
+    "database_count": 0,
+    "attack_graph_path_count": 7
+  },
+  "attack_graph_path_status": {
+    "CONFIRMED": 1,
+    "LIKELY": 4,
+    "UNVERIFIED": 1,
+    "BLOCKED": 1
+  },
+  "simulation": {
+    "min_observed_paths": 1,
+    "min_simulated_paths": 1
+  },
+  "scenarios_min": 1,
+  "export_examples_min": 1
+}
