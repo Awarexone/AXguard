@@ -1,0 +1,47 @@
+# Dependency vulnerability scanning via OSV (free, no API key).
+name: OSV-Scanner
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "42 7 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: osv-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # PR: report newly introduced issues relative to the base branch.
+  scan-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+    with:
+      # Directory scan (osv-scanner expects dirs).
+      scan-args: |-
+        -r
+        ./
+      fail-on-vuln: true
+
+  # Push / schedule: full dependency scan.
+  scan-scheduled:
+    if: github.event_name != 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+    with:
+      scan-args: |-
+        -r
+        ./
+      fail-on-vuln: true
