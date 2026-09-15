@@ -405,11 +405,14 @@ The same audit also writes **diagnostic** artifacts (not the primary vuln report
 ├── dataflow.{json,md}            # taint / dataflow paths
 ├── verification.{json,md}        # Hunter → Judge
 ├── adversary.{json,md}           # false-positive adversary
+├── final-findings.json           # post-adversary finding statuses
 ├── evidence.{json,md}            # evidence & confidence
-└── attack-paths.{json,md}        # attack graph / chaining
+├── attack-paths.{json,md}        # attack graph / chaining
+├── memory/                       # soft Security Memory snapshot (best-effort)
+└── investigation/                # soft Investigation Agent pass (best-effort)
 ```
 
-Related optional outputs live under `.findings/axguard/memory/`, `investigation/`, `twin/`, `predictive/`, `data/`, and `contribute/` when those commands run.
+A full audit may also embed a twin **summary** in the main report; full `security-twin.*` files come from `axguard twin …` (default under `.findings/axguard/twin/`). Dedicated commands can write more under `predictive/`, `data/`, and `contribute/`.
 
 ---
 
