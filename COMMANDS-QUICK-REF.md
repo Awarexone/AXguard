@@ -12,6 +12,7 @@
 | False Positive Adversary | `/axguard-adversary` |
 | Evidence & Confidence | `/axguard-evidence` |
 | Attack graph / vuln chaining | `/axguard-paths` |
+| Training-data pipeline | `/axguard-data` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
 | Auth / IDOR | `/axguard-auth` |
@@ -56,6 +57,9 @@
 .findings/axguard/evidence.md
 .findings/axguard/attack-paths.json
 .findings/axguard/attack-paths.md
+.findings/axguard/data/data-pipeline.json
+.findings/axguard/data/data-pipeline.md
+.findings/axguard/data/data-pipeline.html
 .findings/axguard/axguard-report.json
 ```
 
@@ -72,6 +76,8 @@ axguard verify .
 axguard adversary .
 axguard evidence .
 axguard paths .   # alias: axguard attack-paths .
+axguard data discover
+axguard data report fixtures/data_pipeline
 axguard audit . --fail-on high --out-dir .findings/axguard
 ```
 

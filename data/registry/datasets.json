@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0.0",
+  "tool": "axguard",
+  "generated_at": "2026-09-15T00:00:00+00:00",
+  "datasets": [
+    {
+      "dataset_id": "CyberNative/Code_Vulnerability_Security_DPO",
+      "source": "huggingface",
+      "url": "https://huggingface.co/datasets/CyberNative/Code_Vulnerability_Security_DPO",
+      "license": "Apache-2.0",
+      "license_verified": false,
+      "commercial_use": null,
+      "redistribution": null,
+      "provenance": "",
+      "size": null,
+      "languages": [],
+      "domains": [
+        "CODE_VULNERABILITY",
+        "CODE_FIX"
+      ],
+      "quality": "MEDIUM",
+      "recommended_use": [
+        "RESEARCH_ONLY"
+      ],
+      "status": "UNDER_REVIEW",
+      "notes": [
+        "synthetic preference; high label-noise risk; metadata-only"
+      ],
+      "gate": {
+        "allowed_public_training": false,
+        "recommended_status": "UNDER_REVIEW",
+        "license_normalized": "Apache-2.0",
+        "flags": {
+          "commercial_restriction": false,
+          "non_commercial": false,
+          "share_alike": false,
+          "unknown_license": false,
+          "proprietary": false,
+          "unclear_provenance": false,
+          "restricted_redistribution": false
+        },
+        "reasons": [
+          "license_verified=false \u2014 human review required"
+        ],
+        "requires_human_approval": true
+      }
+    },
+    {
+      "dataset_id": "ismailtasdelen/unified-vulnerability-intelligence-dataset",
+      "source": "huggingface",
+      "url": "https://huggingface.co/datasets/ismailtasdelen/unified-vulnerability-intelligence-dataset",
+      "license": "MIT",
+      "license_verified": false,
+      "commercial_use": null,
+      "redistribution": null,
+      "provenance": "",
+      "size": null,
+      "languages": [],
+      "domains": [
+        "CVE_CWE",
+        "SECURITY_REASONING"
+      ],
+      "quality": "MEDIUM",
+      "recommended_use": [
+        "RESEARCH_ONLY"
+      ],
+      "status": "UNDER_REVIEW",
+      "notes": [
+        "taxonomy cross-check only; prefer official CWE/OWASP"
+      ],
+      "gate": {
+        "allowed_public_training": false,
+        "recommended_status": "UNDER_REVIEW",
+        "license_normalized": "MIT",
+        "flags": {
+          "commercial_restriction": false,
+          "non_commercial": false,
+          "share_alike": false,
+          "unknown_license": false,
+          "proprietary": false,
+          "unclear_provenance": false,
+          "restricted_redistribution": false
+        },
+        "reasons": [
+          "license_verified=false \u2014 human review required"
+        ],
+        "requires_human_approval": true
+      }
+    },
+    {
+      "dataset_id": "axguard/synthetic-fp-corpus",
+      "source": "axguard",
+      "url": "fixtures/data_pipeline/sample_fp.jsonl",
+      "license": "MIT",
+      "license_verified": true,
+      "commercial_use": true,
+      "redistribution": true,
+      "provenance": "",
+      "size": null,
+      "languages": [],
+      "domains": [
+        "FALSE_POSITIVE",
+        "SECURITY_REASONING"
+      ],
+      "quality": "HIGH",
+      "recommended_use": [
+        "TRAINING",
+        "VALIDATION"
+      ],
+      "status": "APPROVED",
+      "notes": [
+        "tiny synthetic fixture for pipeline tests"
+      ],
+      "gate": {
+        "allowed_public_training": true,
+        "recommended_status": "APPROVED",
+        "license_normalized": "MIT",
+        "flags": {
+          "commercial_restriction": false,
+          "non_commercial": false,
+          "share_alike": false,
+          "unknown_license": false,
+          "proprietary": false,
+          "unclear_provenance": false,
+          "restricted_redistribution": false
+        },
+        "reasons": [
+          "License family approved for public training when verified"
+        ],
+        "requires_human_approval": false
+      }
+    },
+    {
+      "dataset_id": "example/proprietary-blocked",
+      "source": "example",
+      "url": "",
+      "license": "Proprietary",
+      "license_verified": true,
+      "commercial_use": null,
+      "redistribution": null,
+      "provenance": "",
+      "size": null,
+      "languages": [],
+      "domains": [
+        "CODE_VULNERABILITY"
+      ],
+      "quality": "UNKNOWN",
+      "recommended_use": [
+        "RESEARCH_ONLY"
+      ],
+      "status": "DISCOVERED",
+      "notes": [
+        "seed for license-gate tests"
+      ],
+      "gate": {
+        "allowed_public_training": false,
+        "recommended_status": "REJECTED",
+        "license_normalized": "Proprietary",
+        "flags": {
+          "commercial_restriction": true,
+          "non_commercial": false,
+          "share_alike": false,
+          "unknown_license": false,
+          "proprietary": true,
+          "unclear_provenance": false,
+          "restricted_redistribution": true
+        },
+        "reasons": [
+          "Proprietary must not enter public training corpus automatically"
+        ],
+        "requires_human_approval": true
+      }
+    }
+  ],
+  "summary": {
+    "dataset_count": 4,
+    "by_status": {
+      "APPROVED": 1,
+      "DISCOVERED": 1,
+      "UNDER_REVIEW": 2
+    },
+    "approved_training": 1,
+    "rejected": 0,
+    "restricted": 0,
+    "evaluation_only": 0
+  }
+}

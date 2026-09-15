@@ -200,6 +200,40 @@ def build_parser() -> argparse.ArgumentParser:
     )
     # --- end Phase 6 Part2 predictive ---
 
+    data_cmd = sub.add_parser(
+        "data",
+        help="Training-data registry & pipeline (Phase 9 — no model training)",
+    )
+    data_sub = data_cmd.add_subparsers(dest="data_command", required=True)
+    for name, help_text in (
+        ("discover", "Merge seed + references into local dataset registry"),
+        ("inspect", "Show registry summary / one dataset"),
+        ("approve", "Approve dataset (license gate enforced)"),
+        ("reject", "Reject a dataset"),
+        ("normalize", "Run normalize/dedupe/scrub/validate on fixtures"),
+        ("dedupe", "Alias of normalize focusing on duplicates"),
+        ("validate", "Validate registry + fixture examples"),
+        ("benchmark", "Show BENCHMARK_ONLY / contamination guards"),
+        ("prepare", "Prepare splits + DPO pairs (no training)"),
+        ("report", "Write data-pipeline JSON/MD/HTML report"),
+    ):
+        p = data_sub.add_parser(name, help=help_text)
+        p.add_argument("path", nargs="?", default=".", help="Target path (default: .)")
+        p.add_argument(
+            "--out-dir",
+            default=".findings/axguard/data",
+            help="Artifact directory (default: .findings/axguard/data)",
+        )
+        p.add_argument("--no-banner", action="store_true")
+        if name in {"approve", "reject", "inspect"}:
+            p.add_argument("--id", dest="dataset_id", help="Dataset id")
+        if name == "approve":
+            p.add_argument(
+                "--force-research-only",
+                action="store_true",
+                help="Force EVALUATION_ONLY instead of public TRAINING approval",
+            )
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
     return parser
@@ -218,6 +252,7 @@ AXguard — start with the workflow you need
   False Positive Adversary        axguard adversary .  |  /axguard-adversary
   Evidence & Confidence engine    axguard evidence .  |  /axguard-evidence
   Attack graph / vuln chaining    axguard paths .   |  /axguard-paths
+  Training-data pipeline          axguard data …    |  /axguard-data
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -288,6 +323,7 @@ def main(argv: list[str] | None = None) -> int:
         "evidence",
         "paths",
         "attack-paths",
+        "data",
     } and not getattr(args, "no_banner", False):
         print_banner()
         print()
@@ -623,8 +659,105 @@ def main(argv: list[str] | None = None) -> int:
         # --- end Phase 6 Part2 predictive ---
         return 0
 
+    if args.command == "data":
+        return _run_data_command(args)
+
     parser.print_help()
     return 2
+
+
+def _run_data_command(args: argparse.Namespace) -> int:
+    """Phase 9 training-data CLI — never trains a model."""
+    from engines.data import (
+        discover,
+        load_registry,
+        run_data_pipeline,
+        save_registry,
+        set_status,
+        write_data_pipeline_report,
+    )
+    from engines.data.registry import DEFAULT_REGISTRY_PATH, get_dataset
+
+    action = args.data_command
+    target = Path(args.path).resolve()
+    out_dir = Path(args.out_dir)
+
+    if action == "discover":
+        reg = discover()
+        print("data discover complete (no downloads)")
+        print(f"  datasets  {(reg.get('summary') or {}).get('dataset_count', 0)}")
+        print(f"  registry  {DEFAULT_REGISTRY_PATH}")
+        return 0
+
+    if action == "inspect":
+        reg = load_registry()
+        did = getattr(args, "dataset_id", None)
+        if did:
+            entry = get_dataset(reg, did)
+            if not entry:
+                print(f"error: unknown dataset id: {did}", file=sys.stderr)
+                return 2
+            import json as _json
+
+            print(_json.dumps(entry, indent=2))
+            return 0
+        summary = reg.get("summary") or {}
+        print("data registry")
+        print(f"  datasets          {summary.get('dataset_count', 0)}")
+        print(f"  APPROVED          {summary.get('approved_training', 0)}")
+        print(f"  REJECTED          {summary.get('rejected', 0)}")
+        print(f"  RESTRICTED        {summary.get('restricted', 0)}")
+        print(f"  EVALUATION_ONLY   {summary.get('evaluation_only', 0)}")
+        for d in reg.get("datasets") or []:
+            print(f"  - {d.get('dataset_id')} [{d.get('status')}] license={d.get('license')}")
+        return 0
+
+    if action in {"approve", "reject"}:
+        did = getattr(args, "dataset_id", None)
+        if not did:
+            print("error: --id DATASET_ID required", file=sys.stderr)
+            return 2
+        reg = load_registry()
+        try:
+            if action == "approve":
+                reg = set_status(
+                    reg,
+                    did,
+                    "APPROVED",
+                    force_research_only=bool(
+                        getattr(args, "force_research_only", False)
+                    ),
+                )
+            else:
+                reg = set_status(reg, did, "REJECTED")
+        except (KeyError, PermissionError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        save_registry(reg)
+        entry = get_dataset(reg, did)
+        print(f"data {action}: {did} → {entry.get('status') if entry else '?'}")
+        return 0
+
+    # normalize / dedupe / validate / benchmark / prepare / report
+    result = run_data_pipeline(target)
+    paths = write_data_pipeline_report(result, out_dir)
+    summary = result.get("summary") or {}
+    print(f"data {action} complete (diagnostic — no training)")
+    print(f"  examples     {summary.get('example_count', 0)}")
+    print(f"  duplicates   {summary.get('duplicate_count', 0)}")
+    print(f"  scrub hits   {summary.get('scrub_count', 0)}")
+    print(f"  poison flags {summary.get('poison_count', 0)}")
+    print(f"  TRAINING     {summary.get('TRAINING', 0)}")
+    print(f"  BENCHMARK    {summary.get('BENCHMARK_ONLY', 0)}")
+    print(f"  blocked      {summary.get('blocked', 0)}")
+    if action == "benchmark":
+        blocked = (result.get("prepare") or {}).get("blocked_from_training") or []
+        for b in blocked[:12]:
+            print(f"  - {b.get('example_id')}: {b.get('reason')}")
+    print(f"  json         {paths['json']}")
+    print(f"  md           {paths['markdown']}")
+    print(f"  html         {paths['html']}")
+    return 0
 
 
 def _filter_attack_paths(result: dict, args: argparse.Namespace) -> list[dict]:
