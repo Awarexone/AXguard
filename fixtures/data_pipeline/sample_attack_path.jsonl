@@ -1,0 +1,2 @@
+{"example_id":"path.ssrf.1","kind":"ATTACK_CHAIN","entry_point":"INTERNET","steps":[{"type":"ENDPOINT","id":"POST /import"},{"type":"VULNERABILITY","id":"ssrf"},{"type":"ASSET","id":"credentials"}],"status":"LIKELY","impact":"CREDENTIAL_THEFT","source":"axguard/synthetic"}
+{"example_id":"path.blocked.1","kind":"ATTACK_CHAIN","entry_point":"INTERNET","steps":[{"type":"ENDPOINT","id":"GET /admin"},{"type":"VULNERABILITY","id":"sql-injection"}],"status":"BLOCKED","impact":"UNKNOWN","source":"axguard/synthetic"}

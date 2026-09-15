@@ -6,7 +6,7 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 
 | Package / path | Responsibility |
 |---|---|
-| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `adversary`, `evidence`, `paths`, `help`, `version` |
+| `cli/main.py` | Argparse UI: `scan`, `audit`, `surface`, `flow`, `verify`, `adversary`, `evidence`, `paths`, `data`, `help`, `version` |
 | `engines/scanner.py` | Orchestrates one scan pass |
 | `engines/rules_loader.py` | Loads `rules/*.json` (and a narrow YAML subset) |
 | `engines/source_scan.py` | Walks the tree, applies regex rules, builds findings |
@@ -17,6 +17,7 @@ AXguard splits into a **deterministic scanner** (CLI + rules) and an **agent lay
 | `engines/adversary/` | False Positive Adversary — challenge Judge outcomes (`axguard adversary`) |
 | `engines/evidence/` | Evidence & Confidence engine — evidence graph + explainable confidence (`axguard evidence`) |
 | `engines/attack_graph/` | Attack Graph — chains Phase 1-5 findings into multi-hop attack paths (`axguard paths`) |
+| `engines/data/` | Training-data registry & pipeline — license gate, scrub, prepare (**no training**) (`axguard data`) |
 | `engines/report.py` | text / json / markdown / HTML renderers + `write_reports` |
 | `engines/banner.py` | ASCII branding |
 | `engines/paths.py` | Resolves package root + default `rules/` |

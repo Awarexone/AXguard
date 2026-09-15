@@ -1,0 +1,10 @@
+{
+  "notes": "Expected behaviors for Phase 9 data pipeline fixtures (synthetic only).",
+  "expect": {
+    "min_examples": 8,
+    "scrub_secret_example": "secret.1",
+    "poison_example": "poison.1",
+    "fp_dataset_approved": "axguard/synthetic-fp-corpus",
+    "proprietary_blocked": "example/proprietary-blocked"
+  }
+}
