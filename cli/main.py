@@ -699,6 +699,11 @@ def build_parser() -> argparse.ArgumentParser:
     engage_sub.add_parser("enable", help="Re-enable promotional messaging")
     engage_sub.add_parser("dismiss", help="Dismiss the latest support ask (cooldown)")
 
+    from engines.contributors.cli import add_contribute_parser, add_privacy_parser
+
+    add_privacy_parser(sub)
+    add_contribute_parser(sub)
+
     github_cmd = sub.add_parser(
         "github",
         help="GitHub Security Bot — setup / validate / test / status",
@@ -782,6 +787,7 @@ AXguard — start with the workflow you need
   GitHub Security Bot             axguard github …  |  docs/github/README.md
   About AXGuard                   axguard about
   Engagement prefs                axguard engage disable | enable | dismiss
+  Contribute / privacy (local)    axguard contribute … · axguard privacy …
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -797,7 +803,7 @@ Reports land in:
   .findings/axguard/axguard-report.{html,md,json}
 
 Cheat sheet: COMMANDS-QUICK-REF.md
-Docs: docs/engagement.md (local prefs, no telemetry)
+Docs: docs/engagement.md · docs/contributors/README.md (local prefs, no telemetry)
 """.strip()
 
 
@@ -884,6 +890,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: engage {action} failed: {exc}", file=sys.stderr)
             return 2
         return 0
+
+    if args.command == "privacy":
+        from engines.contributors.cli import run_privacy_command
+
+        return run_privacy_command(args)
+
+    if args.command == "contribute":
+        from engines.contributors.cli import run_contribute_command
+
+        return run_contribute_command(args)
 
     if args.command == "github":
         if not getattr(args, "no_banner", False):
@@ -1035,7 +1051,18 @@ def main(argv: list[str] | None = None) -> int:
             print()
             print(render_report(result, "md"))
         if not getattr(args, "no_engage", False):
-            _print_engagement(emit_after_audit(result))
+            eng = emit_after_audit(result)
+            if eng:
+                _print_engagement(eng)
+            else:
+                from engines.contributors.hooks import emit_after_audit_soft
+
+                _print_engagement(
+                    emit_after_audit_soft(
+                        result,
+                        no_engage=False,
+                    )
+                )
         return 1 if _should_fail(result["findings"], args.fail_on) else 0
 
     if args.command == "surface":
@@ -1134,6 +1161,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  REQUIRES_REVIEW  {summary.get('REQUIRES_REVIEW', 0)}")
         print(f"  json             {paths['json']}")
         print(f"  md               {paths['markdown']}")
+        if not getattr(args, "no_engage", False):
+            from engines.contributors.hooks import emit_after_adversary_soft
+
+            # Shape result like audit context helpers expect
+            soft_result = {
+                **adv_result,
+                "adversary_summary": summary,
+                "findings": adv_result.get("findings") or [],
+            }
+            _print_engagement(
+                emit_after_adversary_soft(
+                    soft_result,
+                    no_engage=False,
+                )
+            )
         return 0
 
     if args.command == "evidence":

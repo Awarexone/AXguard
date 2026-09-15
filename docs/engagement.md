@@ -35,3 +35,7 @@ axguard paths . --no-engage
 2. **No dark patterns** — no urgency, fake social proof, or invented YC status.
 3. **Local only** — state file is optional; delete it to reset.
 4. **One message** — CLI prints at most one engagement block after the real report.
+
+## Contributors
+
+Optional contribution recognition and local packaging live in a separate engine. See [docs/contributors/README.md](contributors/README.md) for privacy defaults, `axguard privacy` / `axguard contribute` CLI, and the prepare-local-only rule (no auto push/PR).
