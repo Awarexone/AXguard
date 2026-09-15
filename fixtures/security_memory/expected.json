@@ -1,0 +1,16 @@
+{
+  "notes": "Temporal Security Memory regression contract (synthetic snapshots — no git required).",
+  "narrative": "Version A: secure control present + FP finding. Version B: control removed + finding CONFIRMED → REGRESSED / re-eval.",
+  "before": "snapshot_a.json",
+  "after": "snapshot_b.json",
+  "expect": {
+    "finding_fingerprint": "mem.f.fixture.sqli.authz",
+    "control_fingerprint": "mem.c.fixture.authz.mw",
+    "path_fingerprint": "mem.p.fixture.entry.sink",
+    "regressed_finding": true,
+    "regressed_outcomes_contain": ["REGRESSED"],
+    "resolved_control_removed": true,
+    "control_state_after_absence": "CONTROL_REMOVED",
+    "fp_needs_reevaluation": true
+  }
+}

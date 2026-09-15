@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "tool": "axguard",
+  "kind": "security_memory_snapshot",
+  "snapshot_id": "snap.fixture.version-a",
+  "generated_at": "2026-09-01T00:00:00+00:00",
+  "source_revision": "rev-a-secure-control",
+  "target": "fixtures/security_memory",
+  "validity": "CURRENT",
+  "findings": [
+    {
+      "fingerprint": "mem.f.fixture.sqli.authz",
+      "item_type": "FINDING",
+      "lifecycle": "FALSE_POSITIVE",
+      "validity": "CURRENT",
+      "status": "FALSE_POSITIVE",
+      "rule_id": "sql.injection",
+      "severity": "HIGH",
+      "file": "app/routes.py",
+      "symbol": "search",
+      "line": 42
+    }
+  ],
+  "controls": [
+    {
+      "fingerprint": "mem.c.fixture.authz.mw",
+      "item_type": "CONTROL",
+      "control_state": "CONTROL_PRESENT",
+      "validity": "CURRENT",
+      "id": "ctrl.authz.middleware",
+      "name": "authz_middleware",
+      "effectiveness": "confirmed",
+      "file": "app/middleware.py"
+    }
+  ],
+  "attack_paths": [
+    {
+      "fingerprint": "mem.p.fixture.entry.sink",
+      "item_type": "ATTACK_PATH",
+      "validity": "CURRENT",
+      "status": "BLOCKED",
+      "hops": ["entrypoint:app/routes.py:search", "control:authz_middleware", "sink:sql.execute"],
+      "entry": "entrypoint:app/routes.py:search",
+      "target": "sink:sql.execute",
+      "tags": ["sql-injection"],
+      "control_fingerprints": ["mem.c.fixture.authz.mw"]
+    }
+  ],
+  "evidence_refs": [],
+  "verifications": [],
+  "decisions": [
+    {
+      "fingerprint": "mem.e.fixture.fp.decision",
+      "item_type": "DECISION",
+      "validity": "CURRENT",
+      "outcome": "FALSE_POSITIVE",
+      "finding_fingerprint": "mem.f.fixture.sqli.authz",
+      "cited_controls": ["mem.c.fixture.authz.mw"],
+      "reason": "authz middleware blocks unauthenticated sink reachability",
+      "needs_reevaluation": false
+    }
+  ],
+  "assumptions": [],
+  "unknowns": [],
+  "security_twin": null,
+  "summary": {
+    "finding_count": 1,
+    "control_count": 1,
+    "path_count": 1,
+    "evidence_ref_count": 0,
+    "unknown_count": 0,
+    "by_lifecycle": {"FALSE_POSITIVE": 1},
+    "by_validity": {"CURRENT": 1}
+  },
+  "provenance": {
+    "ingest": "fixture",
+    "git_revision": "rev-a-secure-control"
+  }
+}

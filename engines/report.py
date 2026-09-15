@@ -97,6 +97,10 @@ def render_markdown(result: dict) -> str:
     if ap_lines:
         lines.extend(ap_lines)
 
+    mem_lines = _memory_markdown_section(result)
+    if mem_lines:
+        lines.extend(mem_lines)
+
     lines.extend(["## Findings", ""])
     if not findings:
         lines.append("No findings.")
@@ -258,6 +262,7 @@ def render_html(result: dict) -> str:
 
     evidence_html = _evidence_html_section(result)
     attack_paths_html = _attack_paths_html_section(result)
+    memory_html = _memory_html_section(result)
     engagement_html = _engagement_html_footer(result)
 
     if findings:
@@ -525,6 +530,7 @@ footer {{
     {evidence_html}
     {attack_paths_html}
     <div id="axguard-attack-detail" hidden></div>
+    {memory_html}
     {controls_html}
     <section>
       <h2>Findings</h2>
@@ -619,6 +625,66 @@ def _attack_paths_html_section(result: dict) -> str:
         f"<p class='meta'>{html.escape(meta)}</p>"
         f"{top_html}</section>"
     )
+
+
+def _memory_markdown_section(result: dict) -> list[str]:
+    """Soft Security Memory section — never fails report rendering."""
+    mem = result.get("security_memory")
+    summary = result.get("memory_summary")
+    if not mem and not summary:
+        return []
+    try:
+        if mem:
+            from engines.memory import render_memory_markdown
+
+            text = render_memory_markdown(mem)
+            # Drop the top H1 so the audit report keeps a single title
+            body = [
+                ln if not ln.startswith("# ") else "## Security Memory"
+                for ln in text.splitlines()
+            ]
+            if body and body[0] != "## Security Memory":
+                body = ["## Security Memory", ""] + body
+            return body + ([""] if body and body[-1] != "" else [])
+        s = summary if isinstance(summary, dict) else {}
+        return [
+            "## Security Memory",
+            "",
+            f"- Snapshot: `{s.get('snapshot_id', 'UNKNOWN')}`",
+            f"- Findings: {s.get('finding_count', 0)}",
+            f"- Controls: {s.get('control_count', 0)}",
+            f"- Attack paths: {s.get('path_count', 0)}",
+            f"- Unknowns: {s.get('unknown_count', 0)}",
+            "",
+        ]
+    except Exception:  # noqa: BLE001 — report must still render
+        return []
+
+
+def _memory_html_section(result: dict) -> str:
+    """Soft Security Memory HTML — never fails report rendering."""
+    mem = result.get("security_memory")
+    summary = result.get("memory_summary")
+    if not mem and not summary:
+        return ""
+    try:
+        if mem:
+            from engines.memory import render_memory_html_section
+
+            return render_memory_html_section(mem)
+        s = summary if isinstance(summary, dict) else {}
+        return (
+            '<section class="axguard-security-memory">'
+            "<h2>Security Memory</h2>"
+            f"<p class='meta'>Snapshot <code>{html.escape(str(s.get('snapshot_id', 'UNKNOWN')))}</code>"
+            f" · findings {html.escape(str(s.get('finding_count', 0)))}"
+            f" · controls {html.escape(str(s.get('control_count', 0)))}"
+            f" · paths {html.escape(str(s.get('path_count', 0)))}"
+            f" · unknowns {html.escape(str(s.get('unknown_count', 0)))}</p>"
+            "</section>"
+        )
+    except Exception:  # noqa: BLE001 — report must still render
+        return ""
 
 
 def _text_report(result: dict) -> str:

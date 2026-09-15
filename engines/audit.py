@@ -282,6 +282,28 @@ def run_audit(options: AuditOptions) -> dict:
         result["attack_graph_summary"] = attack_graph_summary
     if attack_graph_paths is not None:
         result["attack_graph_paths"] = attack_graph_paths
+
+    # Soft Security Memory — never fail audit on memory errors
+    try:
+        from engines.memory import remember_from_attack_graph, remember_from_audit
+
+        memory_dir = Path(out_dir) / "memory"
+        if result.get("attack_graph") or result.get("findings") is not None:
+            snap = remember_from_audit(result, memory_dir=memory_dir)
+        elif attack_graph_result is not None:
+            snap = remember_from_attack_graph(
+                attack_graph_result, memory_dir=memory_dir
+            )
+        else:
+            snap = None
+        if snap is not None:
+            summary = dict(snap.get("summary") or {})
+            summary["snapshot_id"] = snap.get("snapshot_id")
+            summary["memory_dir"] = str(memory_dir)
+            result["memory_summary"] = summary
+    except Exception:  # noqa: BLE001 — memory must never fail audit
+        pass
+
     return result
 
 

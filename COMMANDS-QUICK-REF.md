@@ -12,6 +12,7 @@
 | False Positive Adversary | `/axguard-adversary` |
 | Evidence & Confidence | `/axguard-evidence` |
 | Attack graph / vuln chaining | `/axguard-paths` |
+| Security Memory | `axguard memory …` |
 | Training-data pipeline | `/axguard-data` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
@@ -58,6 +59,7 @@
 .findings/axguard/evidence.md
 .findings/axguard/attack-paths.json
 .findings/axguard/attack-paths.md
+.findings/axguard/memory/
 .findings/axguard/data/data-pipeline.json
 .findings/axguard/data/data-pipeline.md
 .findings/axguard/data/data-pipeline.html
@@ -77,6 +79,7 @@ axguard verify .
 axguard adversary .
 axguard evidence .
 axguard paths .   # alias: axguard attack-paths .
+axguard memory record .
 axguard about
 axguard engage disable
 axguard data discover
