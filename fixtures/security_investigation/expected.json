@@ -1,0 +1,30 @@
+{
+  "kind": "security_investigation_fixture",
+  "cases": [
+    {
+      "id": "direct_sqli",
+      "description": "direct vulnerability — taint to sink, no control",
+      "expect_decision_in": ["VERIFIED", "LIKELY", "REQUIRES_REVIEW", "UNVERIFIED"]
+    },
+    {
+      "id": "fp_parameterized",
+      "description": "false positive — parameterized SQL",
+      "expect_decision_in": ["FALSE_POSITIVE", "LIKELY", "REQUIRES_REVIEW"]
+    },
+    {
+      "id": "alternate_path",
+      "description": "control on one path, open alternate",
+      "expect_decision_in": ["VERIFIED", "LIKELY", "REQUIRES_REVIEW", "UNVERIFIED"]
+    },
+    {
+      "id": "prompt_no_tool",
+      "description": "prompt injection without privileged twin path",
+      "expect_decision_in": ["FALSE_POSITIVE", "UNVERIFIED", "REQUIRES_REVIEW", "LIKELY"]
+    },
+    {
+      "id": "memory_fp_reuse",
+      "description": "reuse current FP from security memory",
+      "expect_decision_in": ["FALSE_POSITIVE"]
+    }
+  ]
+}

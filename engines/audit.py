@@ -333,6 +333,45 @@ def run_audit(options: AuditOptions) -> dict:
     except Exception:  # noqa: BLE001 — memory must never fail audit
         pass
 
+    # Soft Investigation Agent — never fail audit
+    try:
+        from engines.investigation import run_investigation
+
+        inv_dir = Path(out_dir) / "investigation"
+        inv_result = run_investigation(
+            result,
+            budget="FAST",
+            attack_graph=attack_graph_result,
+            memory_dir=Path(out_dir) / "memory",
+            out_dir=inv_dir,
+            write_report=True,
+            parallel=False,
+            max_candidates=8,
+            with_twin=False,
+        )
+        summary = dict(inv_result.get("summary") or {})
+        summary["investigation_dir"] = str(inv_dir)
+        result["investigation_summary"] = summary
+        # Compact package list for report (ids + decisions only)
+        result["investigations"] = [
+            {
+                "investigation_id": i.get("investigation_id"),
+                "candidate_id": i.get("candidate_id"),
+                "status": i.get("status"),
+                "decision": i.get("decision"),
+                "termination_reason": i.get("termination_reason"),
+                "confidence_after": i.get("confidence_after"),
+            }
+            for i in (inv_result.get("investigations") or [])[:20]
+        ]
+        result["security_investigation"] = {
+            "summary": summary,
+            "budget": inv_result.get("budget"),
+            "investigations": result["investigations"],
+        }
+    except Exception:  # noqa: BLE001 — investigation must never fail audit
+        pass
+
     return result
 
 
