@@ -27,6 +27,9 @@ AXguard is built by **[Shuvonsec](https://github.com/shuvonsec)** — Ethical ha
 [![MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-0.2.0-purple.svg)](#)
+[![CI](https://github.com/Awarexone/AXguard/actions/workflows/ci.yml/badge.svg)](https://github.com/Awarexone/AXguard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Awarexone/AXguard/actions/workflows/codeql.yml/badge.svg)](https://github.com/Awarexone/AXguard/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Awarexone/AXguard/badge)](https://scorecard.dev/viewer/?uri=github.com/Awarexone/AXguard)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-black.svg)](https://claude.ai/claude-code)
 [![Cursor](https://img.shields.io/badge/Cursor-skills-black.svg)](https://cursor.com/)
 
@@ -410,6 +413,26 @@ commands/ + rules/ + CLI
 - **Domain skills** teach source→sink analysis, evidence gates, FP controls, and fixes per class (SSRF, SQLi, authZ, prompt injection, MCP, …).
 - **Provenance** lives in `references/` — cite official IDs only; no invented CWE/OWASP mappings; HF datasets are metadata/derived-knowledge only.
 - Validate with: `python scripts/validate_skills.py`
+
+---
+
+## Security checks
+
+AXGuard checks *your* apps before ship. This repository also runs automated
+checks on itself:
+
+| Check | Workflow |
+|---|---|
+| CI tests + fixture self-scan | [`ci.yml`](.github/workflows/ci.yml) |
+| CodeQL (Python) | [`codeql.yml`](.github/workflows/codeql.yml) |
+| Secret detection (Gitleaks) | [`gitleaks.yml`](.github/workflows/gitleaks.yml) |
+| Dependency vulns (OSV-Scanner) | [`osv-scanner.yml`](.github/workflows/osv-scanner.yml) |
+| Actions audit (zizmor) | [`zizmor.yml`](.github/workflows/zizmor.yml) |
+| OpenSSF Scorecard | [`scorecard.yml`](.github/workflows/scorecard.yml) |
+| Dependency updates | [Dependabot](.github/dependabot.yml) |
+
+Report vulnerabilities in AXGuard via [SECURITY.md](.github/SECURITY.md)
+(GitHub Private Vulnerability Reporting preferred).
 
 ---
 
