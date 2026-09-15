@@ -27,6 +27,9 @@ AXguard is built by **[Shuvonsec](https://github.com/shuvonsec)** — Ethical ha
 [![MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-0.2.0-purple.svg)](#)
+[![CI](https://github.com/Awarexone/AXguard/actions/workflows/ci.yml/badge.svg)](https://github.com/Awarexone/AXguard/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Awarexone/AXguard/actions/workflows/codeql.yml/badge.svg)](https://github.com/Awarexone/AXguard/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Awarexone/AXguard/badge)](https://scorecard.dev/viewer/?uri=github.com/Awarexone/AXguard)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-black.svg)](https://claude.ai/claude-code)
 [![Cursor](https://img.shields.io/badge/Cursor-skills-black.svg)](https://cursor.com/)
 
@@ -164,9 +167,32 @@ open .findings/axguard/axguard-report.html
 | Fix confirmed bugs | `/axguard-fix` |
 | Need a report | `/axguard-report` |
 | Add a CI gate | `/axguard-ci` |
+| GitHub PR bot (self-host) | `axguard github setup` → [docs/github](docs/github/README.md) |
 | Full security-lead pass | `axguard-cso` |
 
 See the [command cheat sheet](COMMANDS-QUICK-REF.md).
+
+---
+
+## GitHub Security Bot
+
+Optional GitHub App adapter: review PRs with Check Runs + one updatable summary
+comment. Runs AXGuard Core behind a thin webhook adapter (`engines/github/`).
+Local CLI scanning does **not** require it.
+
+```bash
+axguard github setup .
+axguard github validate .
+axguard github test .
+axguard github status .
+```
+
+- Install & permissions: [docs/github/install.md](docs/github/install.md) · [docs/github/permissions.md](docs/github/permissions.md)
+- Config (new `.axguard.yml`): [docs/github/config.md](docs/github/config.md)
+- Self-host (preferred): [docs/github/self-hosting.md](docs/github/self-hosting.md)
+- Privacy / AI: [docs/github/privacy.md](docs/github/privacy.md) · [docs/github/ai-providers.md](docs/github/ai-providers.md)
+- Architecture research: [docs/research/github-security-bot.md](docs/research/github-security-bot.md)
+- Marketplace prep only (no approval claimed): [docs/github/marketplace.md](docs/github/marketplace.md)
 
 ---
 
@@ -237,6 +263,11 @@ axguard verify .
 axguard adversary .
 axguard evidence .
 axguard paths .    # attack graph + vuln chaining (alias: axguard attack-paths .)
+
+# GitHub Security Bot (optional adapter)
+axguard github setup .
+axguard github validate .
+axguard github status .
 ```
 
 On top of `axguard paths`, `engines/attack_graph/aggregate.py` and
@@ -378,6 +409,7 @@ Beyond open-source tools, AwareXone also builds AI-driven defenses against scams
 |---|---|
 | [DEV.md](DEV.md) | Setup and day-to-day development |
 | [docs/architecture.md](docs/architecture.md) | How the scanner works |
+| [docs/github/README.md](docs/github/README.md) | GitHub Security Bot (App adapter) |
 | [docs/adding-rules.md](docs/adding-rules.md) | Adding detections |
 | [docs/plugin.md](docs/plugin.md) | Agent plugin setup |
 | [docs/SKILL-SCHEMA.md](docs/SKILL-SCHEMA.md) | Domain skill frontmatter + sections |
@@ -410,6 +442,26 @@ commands/ + rules/ + CLI
 - **Domain skills** teach source→sink analysis, evidence gates, FP controls, and fixes per class (SSRF, SQLi, authZ, prompt injection, MCP, …).
 - **Provenance** lives in `references/` — cite official IDs only; no invented CWE/OWASP mappings; HF datasets are metadata/derived-knowledge only.
 - Validate with: `python scripts/validate_skills.py`
+
+---
+
+## Security checks
+
+AXGuard checks *your* apps before ship. This repository also runs automated
+checks on itself:
+
+| Check | Workflow |
+|---|---|
+| CI tests + fixture self-scan | [`ci.yml`](.github/workflows/ci.yml) |
+| CodeQL (Python) | [`codeql.yml`](.github/workflows/codeql.yml) |
+| Secret detection (Gitleaks) | [`gitleaks.yml`](.github/workflows/gitleaks.yml) |
+| Dependency vulns (OSV-Scanner) | [`osv-scanner.yml`](.github/workflows/osv-scanner.yml) |
+| Actions audit (zizmor) | [`zizmor.yml`](.github/workflows/zizmor.yml) |
+| OpenSSF Scorecard | [`scorecard.yml`](.github/workflows/scorecard.yml) |
+| Dependency updates | [Dependabot](.github/dependabot.yml) |
+
+Report vulnerabilities in AXGuard via [SECURITY.md](.github/SECURITY.md)
+(GitHub Private Vulnerability Reporting preferred).
 
 ---
 
