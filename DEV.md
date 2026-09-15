@@ -198,4 +198,4 @@ Bump version in `pyproject.toml`, README badges, and `engines/audit.py` / CLI `v
 | [public-skills-builder](https://github.com/Awarexone/public-skills-builder) | Generate hunt skills |
 | [web3 skills](https://github.com/Awarexone/web3-bug-bounty-hunting-ai-skills) | Smart-contract skills |
 
-Questions / sponsorship: [awarexone.com](https://awarexone.com) · [awarexone@gmail.com](mailto:awarexone@gmail.com)
+Questions / sponsorship: [awarexone.com](https://awarexone.com) · [hello@awarexone.com](mailto:hello@awarexone.com) · [b2b@awarexone.com](mailto:b2b@awarexone.com) · [shuvon@awarexone.com](mailto:shuvon@awarexone.com)

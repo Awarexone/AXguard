@@ -34,6 +34,8 @@ AXguard is built by **[Shuvonsec](https://github.com/shuvonsec)** — Ethical ha
 
 [Website](https://awarexone.com/) · [GitHub](https://github.com/Awarexone) · [X](https://x.com/awarexone) · [Dev Docs](DEV.md)
 
+**Contact:** [hello@awarexone.com](mailto:hello@awarexone.com) · [b2b@awarexone.com](mailto:b2b@awarexone.com) · [shuvon@awarexone.com](mailto:shuvon@awarexone.com)
+
 ---
 
 ## What is AXguard?
@@ -360,6 +362,12 @@ Point it at a live target. It helps you recon, find vulnerabilities, validate fi
 
 Beyond open-source tools, AwareXone also builds AI-driven defenses against scams, fraud, and social engineering, and provides human-risk security services for organizations.
 
+| | |
+|---|---|
+| General | [hello@awarexone.com](mailto:hello@awarexone.com) |
+| Business / B2B | [b2b@awarexone.com](mailto:b2b@awarexone.com) |
+| Founder | [shuvon@awarexone.com](mailto:shuvon@awarexone.com) |
+
 → [Get in touch](https://awarexone.com/)
 
 ---
@@ -446,6 +454,7 @@ If it helps you build safer software, a **star on GitHub** helps more builders f
 You can also support the project and help fund more open-source security tools.
 
 **Website:** [awarexone.com](https://awarexone.com/)  
+**Email:** [hello@awarexone.com](mailto:hello@awarexone.com) · [b2b@awarexone.com](mailto:b2b@awarexone.com) · [shuvon@awarexone.com](mailto:shuvon@awarexone.com)  
 **Buy Me a Coffee:** [buymeacoffee.com/shuvonsec](https://www.buymeacoffee.com/shuvonsec)
 
 | | |
