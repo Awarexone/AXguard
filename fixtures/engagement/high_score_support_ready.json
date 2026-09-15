@@ -1,0 +1,26 @@
+{
+  "state": "REPEATED_VALUE",
+  "engagement_score": 55,
+  "first_run_shown": true,
+  "sessions": 4,
+  "last_session_at": "2026-03-01T00:00:00+00:00",
+  "meaningful_sessions": 4,
+  "commands_used": ["audit", "scan"],
+  "milestones_seen": ["first_verified", "fp_rejected"],
+  "last_message_ids": ["first_run_intro", "first_value_story"],
+  "last_support_ask_at": null,
+  "support_dismiss_count": 0,
+  "promo_disabled": false,
+  "yc_messaging_enabled": false,
+  "yc_url": null,
+  "social_proof": null,
+  "support_score_threshold": null,
+  "score_flags": {
+    "first_success": true,
+    "verified_finding": true,
+    "second_session": true,
+    "multiple_commands": true
+  },
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-03-01T00:00:00+00:00"
+}

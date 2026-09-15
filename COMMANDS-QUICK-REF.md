@@ -33,6 +33,7 @@
 | Patch confirmed bugs | `/axguard-fix` |
 | Regenerate reports | `/axguard-report` |
 | Add CI gate | `/axguard-ci` |
+| About / engagement prefs | `axguard about` · `axguard engage disable` |
 
 ## Default pipeline
 
@@ -76,6 +77,8 @@ axguard verify .
 axguard adversary .
 axguard evidence .
 axguard paths .   # alias: axguard attack-paths .
+axguard about
+axguard engage disable
 axguard data discover
 axguard data report fixtures/data_pipeline
 axguard audit . --fail-on high --out-dir .findings/axguard

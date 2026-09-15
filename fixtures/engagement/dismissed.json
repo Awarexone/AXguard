@@ -1,0 +1,25 @@
+{
+  "state": "DISMISSED",
+  "engagement_score": 60,
+  "first_run_shown": true,
+  "sessions": 5,
+  "last_session_at": "2026-02-15T00:00:00+00:00",
+  "meaningful_sessions": 6,
+  "commands_used": ["audit", "scan"],
+  "milestones_seen": ["first_verified", "first_attack_path"],
+  "last_message_ids": ["repeated_value_star"],
+  "last_support_ask_at": "2026-09-14T00:00:00+00:00",
+  "support_dismiss_count": 1,
+  "promo_disabled": false,
+  "yc_messaging_enabled": false,
+  "yc_url": null,
+  "social_proof": null,
+  "support_score_threshold": null,
+  "score_flags": {
+    "first_success": true,
+    "verified_finding": true,
+    "second_session": true
+  },
+  "created_at": "2026-01-01T00:00:00+00:00",
+  "updated_at": "2026-09-14T00:00:00+00:00"
+}
