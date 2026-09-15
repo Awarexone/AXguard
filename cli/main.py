@@ -406,6 +406,110 @@ def build_parser() -> argparse.ArgumentParser:
         help="Artifact directory (default: .findings/axguard/twin)",
     )
 
+    memory_cmd = sub.add_parser(
+        "memory",
+        help="Security Memory — longitudinal findings/controls/paths",
+    )
+    memory_sub = memory_cmd.add_subparsers(dest="memory_command", required=True)
+
+    mem_record = memory_sub.add_parser(
+        "record",
+        help="Run attack graph (or ingest audit JSON) and record a memory snapshot",
+    )
+    mem_record.add_argument(
+        "path", nargs="?", default=".", help="Target path or audit/attack-graph JSON"
+    )
+    mem_record.add_argument(
+        "--out-dir",
+        default=".findings/axguard/memory",
+        help="Memory directory (default: .findings/axguard/memory)",
+    )
+    mem_record.add_argument(
+        "--revision",
+        default=None,
+        help="Source revision label (default: git HEAD or UNKNOWN)",
+    )
+    mem_record.add_argument("--no-banner", action="store_true")
+    mem_record.add_argument(
+        "--no-engage",
+        action="store_true",
+        help="Skip contextual engagement messages",
+    )
+
+    def _mem_common(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--out-dir",
+            default=".findings/axguard/memory",
+            help="Memory directory (default: .findings/axguard/memory)",
+        )
+        p.add_argument("--no-banner", action="store_true")
+        p.add_argument(
+            "--no-engage",
+            action="store_true",
+            help="Skip contextual engagement messages",
+        )
+
+    mem_show = memory_sub.add_parser("show", help="Show current Security Memory state")
+    _mem_common(mem_show)
+
+    mem_history = memory_sub.add_parser(
+        "history", help="List memory snapshots (or one finding's ledger entry)"
+    )
+    _mem_common(mem_history)
+    mem_history.add_argument(
+        "--finding",
+        dest="finding_id",
+        default=None,
+        help="Finding fingerprint / id to look up in the ledger",
+    )
+
+    mem_changes = memory_sub.add_parser(
+        "changes", help="Diff two memory snapshots (default: latest pair)"
+    )
+    _mem_common(mem_changes)
+    mem_changes.add_argument("--before", dest="before_id", default=None)
+    mem_changes.add_argument("--after", dest="after_id", default=None)
+
+    mem_regressions = memory_sub.add_parser(
+        "regressions", help="Detect regressions between snapshots"
+    )
+    _mem_common(mem_regressions)
+
+    mem_findings = memory_sub.add_parser(
+        "findings", help="List remembered findings (current snapshot)"
+    )
+    _mem_common(mem_findings)
+    mem_findings.add_argument(
+        "--rejected",
+        action="store_true",
+        help="Show rejected / false-positive findings only",
+    )
+
+    mem_controls = memory_sub.add_parser(
+        "controls", help="List remembered controls"
+    )
+    _mem_common(mem_controls)
+
+    mem_paths = memory_sub.add_parser(
+        "paths", help="List remembered attack paths"
+    )
+    _mem_common(mem_paths)
+
+    mem_unknowns = memory_sub.add_parser(
+        "unknowns", help="List remembered unknowns"
+    )
+    _mem_common(mem_unknowns)
+
+    mem_query = memory_sub.add_parser(
+        "query", help="Ask a structured question of Security Memory"
+    )
+    _mem_common(mem_query)
+    mem_query.add_argument(
+        "--question",
+        required=True,
+        help='Natural-language question (e.g. "what changed")',
+    )
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
 
@@ -438,6 +542,7 @@ AXguard — start with the workflow you need
   Attack graph / vuln chaining    axguard paths .   |  /axguard-paths
   Training-data pipeline          axguard data …    |  /axguard-data
   Security Twin (symbolic)        axguard twin …    |  docs/twin/README.md
+  Security Memory (longitudinal)  axguard memory …  |  docs/memory/README.md
   About AXGuard                   axguard about
   Engagement prefs                axguard engage disable | enable | dismiss
   First look at a new codebase    /axguard-threat-model → /axguard-audit
@@ -555,6 +660,7 @@ def main(argv: list[str] | None = None) -> int:
         "attack-paths",
         "data",
         "twin",
+        "memory",
     } and not getattr(args, "no_banner", False):
         print_banner()
         print()
@@ -909,9 +1015,160 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "twin":
         return _run_twin_command(args)
 
+    if args.command == "memory":
+        return _run_memory_command(args)
+
     parser.print_help()
     return 2
 
+
+def _run_memory_command(args: argparse.Namespace) -> int:
+    """Security Memory CLI — project-local longitudinal store."""
+    import json as _json
+
+    from engines.memory import (
+        answer_memory_query,
+        get_attack_paths,
+        get_controls,
+        get_current_state,
+        get_findings,
+        get_history,
+        get_rejected_findings,
+        get_unknowns,
+        load_ledger,
+        render_memory_markdown,
+        run_memory_changes,
+        run_memory_record,
+        run_memory_regressions,
+        write_memory_report,
+    )
+
+    action = args.memory_command
+    out_dir = Path(args.out_dir)
+
+    if action == "record":
+        target = Path(args.path)
+        source: Path | dict
+        if target.is_file() and target.suffix.lower() == ".json":
+            try:
+                payload = _json.loads(target.read_text(encoding="utf-8"))
+            except (OSError, _json.JSONDecodeError) as exc:
+                print(f"error: cannot load audit/graph JSON: {exc}", file=sys.stderr)
+                return 2
+            if not isinstance(payload, dict):
+                print("error: JSON root must be an object", file=sys.stderr)
+                return 2
+            source = payload
+        else:
+            source = target.resolve()
+            if not source.exists():
+                print(f"error: path not found: {source}", file=sys.stderr)
+                return 2
+        result = run_memory_record(
+            source,
+            memory_dir=out_dir,
+            revision=getattr(args, "revision", None),
+            write_report=True,
+        )
+        summary = result.get("summary") or {}
+        print("memory record complete")
+        print(f"  snapshot   {result.get('snapshot_id')}")
+        print(f"  findings   {summary.get('finding_count', 0)}")
+        print(f"  controls   {summary.get('control_count', 0)}")
+        print(f"  paths      {summary.get('path_count', 0)}")
+        print(f"  unknowns   {summary.get('unknown_count', 0)}")
+        print(f"  memory     {result.get('memory_dir')}")
+        report = result.get("report") or {}
+        if report.get("markdown"):
+            print(f"  md         {report['markdown']}")
+        if report.get("html_section"):
+            print(f"  html       {report['html_section']}")
+        return 0
+
+    if action == "show":
+        state = get_current_state(out_dir)
+        print(render_memory_markdown(state, memory_dir=out_dir))
+        paths = write_memory_report(state, memory_dir=out_dir, out_dir=out_dir)
+        print(f"  md    {paths.get('markdown')}")
+        print(f"  html  {paths.get('html_section')}")
+        return 0
+
+    if action == "history":
+        finding_id = getattr(args, "finding_id", None)
+        if finding_id:
+            led = load_ledger(out_dir)
+            entry = (led.get("entries") or {}).get(finding_id)
+            if entry is None:
+                # Soft match on rule_id / substring fingerprint
+                for fp, ent in (led.get("entries") or {}).items():
+                    if finding_id in str(fp) or finding_id == str(
+                        ent.get("rule_id") or ""
+                    ):
+                        entry = ent
+                        break
+            if entry is None:
+                print(f"error: no ledger entry for finding: {finding_id}", file=sys.stderr)
+                return 2
+            print(_json.dumps(entry, indent=2))
+            return 0
+        hist = get_history(out_dir)
+        print("memory history")
+        print(f"  snapshots  {len(hist.get('snapshot_ids') or [])}")
+        for sid in hist.get("snapshot_ids") or []:
+            print(f"  - {sid}")
+        for snap in hist.get("snapshots") or []:
+            s = snap.get("summary") or {}
+            print(
+                f"    {snap.get('snapshot_id')}: findings={s.get('finding_count', 0)} "
+                f"paths={s.get('path_count', 0)} rev={snap.get('source_revision')}"
+            )
+        return 0
+
+    if action == "changes":
+        diff = run_memory_changes(
+            out_dir,
+            before_id=getattr(args, "before_id", None),
+            after_id=getattr(args, "after_id", None),
+        )
+        print(_json.dumps(diff, indent=2))
+        return 0
+
+    if action == "regressions":
+        regs = run_memory_regressions(out_dir)
+        print(_json.dumps(regs, indent=2))
+        return 0
+
+    if action == "findings":
+        if getattr(args, "rejected", False):
+            items = get_rejected_findings(out_dir)
+        else:
+            items = get_findings(out_dir)
+        print(_json.dumps(items, indent=2))
+        return 0
+
+    if action == "controls":
+        print(_json.dumps(get_controls(out_dir), indent=2))
+        return 0
+
+    if action == "paths":
+        print(_json.dumps(get_attack_paths(out_dir), indent=2))
+        return 0
+
+    if action == "unknowns":
+        print(_json.dumps(get_unknowns(out_dir), indent=2))
+        return 0
+
+    if action == "query":
+        question = getattr(args, "question", None) or ""
+        if not question.strip():
+            print("error: --question is required", file=sys.stderr)
+            return 2
+        answer = answer_memory_query(out_dir, question)
+        print(_json.dumps(answer, indent=2))
+        return 0
+
+    print(f"error: unknown memory command: {action}", file=sys.stderr)
+    return 2
 
 def _run_twin_command(args: argparse.Namespace) -> int:
     """Security Twin CLI — local symbolic analysis only (never network)."""

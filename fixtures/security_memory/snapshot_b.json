@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "tool": "axguard",
+  "kind": "security_memory_snapshot",
+  "snapshot_id": "snap.fixture.version-b",
+  "generated_at": "2026-09-15T00:00:00+00:00",
+  "source_revision": "rev-b-control-removed",
+  "target": "fixtures/security_memory",
+  "validity": "CURRENT",
+  "findings": [
+    {
+      "fingerprint": "mem.f.fixture.sqli.authz",
+      "item_type": "FINDING",
+      "lifecycle": "REGRESSED",
+      "validity": "REGRESSED",
+      "status": "CONFIRMED",
+      "rule_id": "sql.injection",
+      "severity": "HIGH",
+      "file": "app/routes.py",
+      "symbol": "search",
+      "line": 42
+    }
+  ],
+  "controls": [],
+  "attack_paths": [
+    {
+      "fingerprint": "mem.p.fixture.entry.sink",
+      "item_type": "ATTACK_PATH",
+      "validity": "CURRENT",
+      "status": "REACHABLE",
+      "hops": ["entrypoint:app/routes.py:search", "sink:sql.execute"],
+      "entry": "entrypoint:app/routes.py:search",
+      "target": "sink:sql.execute",
+      "tags": ["sql-injection"],
+      "control_fingerprints": []
+    }
+  ],
+  "evidence_refs": [],
+  "verifications": [],
+  "decisions": [
+    {
+      "fingerprint": "mem.e.fixture.fp.decision",
+      "item_type": "DECISION",
+      "validity": "CURRENT",
+      "outcome": "FALSE_POSITIVE",
+      "finding_fingerprint": "mem.f.fixture.sqli.authz",
+      "cited_controls": ["mem.c.fixture.authz.mw"],
+      "reason": "authz middleware blocks unauthenticated sink reachability",
+      "needs_reevaluation": true
+    }
+  ],
+  "assumptions": [],
+  "unknowns": [],
+  "security_twin": null,
+  "summary": {
+    "finding_count": 1,
+    "control_count": 0,
+    "path_count": 1,
+    "evidence_ref_count": 0,
+    "unknown_count": 0,
+    "by_lifecycle": {"REGRESSED": 1},
+    "by_validity": {"REGRESSED": 1}
+  },
+  "provenance": {
+    "ingest": "fixture",
+    "git_revision": "rev-b-control-removed"
+  }
+}
