@@ -298,6 +298,30 @@ def _run_core_analysis(
     except Exception as exc:  # noqa: BLE001
         memory_summary = {"error": redact_secrets(str(exc))}
 
+    # Soft Predictive Security — additive; never fails the review pipeline
+    predictive: dict[str, Any] = {}
+    try:
+        from engines.predictive import run_predict
+
+        base_ag = None
+        if twin_base and isinstance(twin_base, dict):
+            base_ag = twin_base.get("attack_graph")
+        predictive = run_predict(
+            target,
+            mode="pr" if mode == Mode.REVIEW else "architecture",
+            attack_graph=attack_graph if isinstance(attack_graph, dict) else None,
+            twin=twin_head if isinstance(twin_head, dict) else None,
+            base_attack_graph=base_ag if isinstance(base_ag, dict) else None,
+            base_twin=twin_base if isinstance(twin_base, dict) else None,
+            memory_dir=Path(target) / ".findings" / "axguard" / "memory",
+            write_report=False,
+            with_twin=False,  # already built above
+            with_memory=True,
+        )
+        predictive = redact_secrets(predictive)
+    except Exception as exc:  # noqa: BLE001
+        predictive = {"available": False, "error": redact_secrets(str(exc))}
+
     return {
         "verification": verification,
         "adversary": adversary,
@@ -306,6 +330,7 @@ def _run_core_analysis(
         "twin_head": twin_head,
         "investigation": investigation,
         "memory_summary": memory_summary,
+        "predictive": predictive,
         "ai_mode": ai.get("mode"),
         "changed_files": files,
     }
@@ -375,21 +400,46 @@ def _build_pipeline_result(
     if regressions:
         summary += f"; {len(regressions)} regression(s)"
 
-    text_lines = [
-        f"Mode: {mode.value}",
-        f"AI: {core.get('ai_mode') or 'no-llm'}",
-        f"Changed files analyzed: {len(core.get('changed_files') or [])}",
-        "",
-    ]
-    for f in findings:
-        if f.lifecycle == FindingLifecycle.RESOLVED:
-            text_lines.append(f"RESOLVED: {f.finding_id}")
-            continue
-        if (f.status or "").upper() == "FALSE_POSITIVE":
-            continue
-        text_lines.append(
-            f"{f.severity.upper()} {f.status} {f.title} ({f.file or '?'}:{f.line or '?'})"
+    predictive = core.get("predictive") if isinstance(core.get("predictive"), dict) else {}
+    pred_n = len(predictive.get("risks") or [])
+    if pred_n:
+        summary += f"; {pred_n} predictive signal(s)"
+
+    try:
+        from engines.predictive.github_output import (
+            format_github_check_text,
+            merge_predictive_into_summary_lines,
         )
+
+        check_text = format_github_check_text(
+            verified_findings=findings,
+            predictive=predictive if predictive.get("risks") is not None else None,
+            comparisons=list(predictive.get("comparisons") or []),
+            extra_lines=[
+                f"Mode: {mode.value}",
+                f"AI: {core.get('ai_mode') or 'no-llm'}",
+                f"Changed files analyzed: {len(core.get('changed_files') or [])}",
+            ],
+        )
+        summary_lines = merge_predictive_into_summary_lines([], predictive)
+    except Exception:  # noqa: BLE001
+        text_lines = [
+            f"Mode: {mode.value}",
+            f"AI: {core.get('ai_mode') or 'no-llm'}",
+            f"Changed files analyzed: {len(core.get('changed_files') or [])}",
+            "",
+        ]
+        for f in findings:
+            if f.lifecycle == FindingLifecycle.RESOLVED:
+                text_lines.append(f"RESOLVED: {f.finding_id}")
+                continue
+            if (f.status or "").upper() == "FALSE_POSITIVE":
+                continue
+            text_lines.append(
+                f"{f.severity.upper()} {f.status} {f.title} ({f.file or '?'}:{f.line or '?'})"
+            )
+        check_text = "\n".join(text_lines)
+        summary_lines = []
 
     return PipelineResult(
         mode=mode,
@@ -397,10 +447,10 @@ def _build_pipeline_result(
         findings=findings,
         rejected_count=rejected,
         regressions=regressions,
-        summary_lines=[],
+        summary_lines=summary_lines,
         check_output_title=title,
         check_output_summary=summary,
-        check_output_text="\n".join(text_lines),
+        check_output_text=check_text,
         analysis_failed=analysis_failed,
         failure=failure,
         memory_summary=mem if isinstance(mem, dict) else {},
@@ -408,6 +458,7 @@ def _build_pipeline_result(
         meta={
             "investigation_id": (core.get("investigation") or {}).get("investigation_id"),
             "untrusted_pr_title": None,
+            "predictive": predictive,
         },
     )
 

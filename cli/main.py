@@ -576,6 +576,114 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip engagement / first-run messaging",
     )
 
+    predict_cmd = sub.add_parser(
+        "predict",
+        help=(
+            "Predictive Security Intelligence — observed change → risk signal "
+            "(not confirmed findings)"
+        ),
+    )
+    predict_cmd.add_argument(
+        "path",
+        nargs="?",
+        default=".",
+        help="Target path or attack-graph / predict JSON (default: .)",
+    )
+    predict_mode = predict_cmd.add_mutually_exclusive_group()
+    predict_mode.add_argument(
+        "--architecture",
+        action="store_const",
+        const="architecture",
+        dest="predict_mode",
+        help="Architecture / surface / trust-boundary focus",
+    )
+    predict_mode.add_argument(
+        "--agent",
+        action="store_const",
+        const="agent",
+        dest="predict_mode",
+        help="AI agent privilege / tool focus",
+    )
+    predict_mode.add_argument(
+        "--mcp",
+        action="store_const",
+        const="mcp",
+        dest="predict_mode",
+        help="MCP trust / tool permission focus",
+    )
+    predict_mode.add_argument(
+        "--pr",
+        action="store_const",
+        const="pr",
+        dest="predict_mode",
+        help="PR / change-driven predictive analysis (use --base)",
+    )
+    predict_mode.add_argument(
+        "--what-if",
+        action="store_const",
+        const="what-if",
+        dest="predict_mode",
+        help="Counterfactual what-if via Security Twin",
+    )
+    predict_cmd.set_defaults(predict_mode="default")
+    predict_cmd.add_argument(
+        "--base",
+        default=None,
+        help="Base path or prior predict/attack-graph JSON for change comparison",
+    )
+    predict_cmd.add_argument(
+        "--scenario",
+        default=None,
+        help="What-if scenario key (with --what-if)",
+    )
+    predict_cmd.add_argument(
+        "--remove-control",
+        default=None,
+        help="What-if: assume control removed/bypassed",
+    )
+    predict_cmd.add_argument(
+        "--grant-agent-tool",
+        default=None,
+        help="What-if: assume agent granted a tool",
+    )
+    predict_cmd.add_argument(
+        "--compromise-entity",
+        default=None,
+        help="What-if: assume entity compromised",
+    )
+    predict_cmd.add_argument(
+        "--out-dir",
+        default=".findings/axguard/predictive",
+        help="Artifact directory (default: .findings/axguard/predictive)",
+    )
+    predict_cmd.add_argument(
+        "--memory-dir",
+        default=".findings/axguard/memory",
+        help="Security Memory directory for historical regressions",
+    )
+    predict_cmd.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Print predictive JSON to stdout",
+    )
+    predict_cmd.add_argument(
+        "--no-twin",
+        action="store_true",
+        help="Skip Security Twin soft integration",
+    )
+    predict_cmd.add_argument(
+        "--no-memory",
+        action="store_true",
+        help="Skip Security Memory soft integration",
+    )
+    predict_cmd.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+    predict_cmd.add_argument(
+        "--no-engage",
+        action="store_true",
+        help="Skip engagement / first-run messaging",
+    )
+
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
 
@@ -665,6 +773,7 @@ AXguard — start with the workflow you need
   Security Twin (symbolic)        axguard twin …    |  docs/twin/README.md
   Security Memory (longitudinal)  axguard memory …  |  docs/memory/README.md
   Investigation Agent             axguard investigate …  |  docs/investigation/README.md
+  Predictive Security             axguard predict … |  engines/predictive/
   GitHub Security Bot             axguard github …  |  docs/github/README.md
   About AXGuard                   axguard about
   Engagement prefs                axguard engage disable | enable | dismiss
@@ -791,6 +900,7 @@ def main(argv: list[str] | None = None) -> int:
         "twin",
         "memory",
         "investigate",
+        "predict",
     } and not getattr(args, "no_banner", False):
         print_banner()
         print()
@@ -1151,6 +1261,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "investigate":
         return _run_investigate_command(args)
 
+    if args.command == "predict":
+        return _run_predict_command(args)
+
     parser.print_help()
     return 2
 
@@ -1172,6 +1285,68 @@ def _run_github_command(args: argparse.Namespace) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"error: github {action} failed: {exc}", file=sys.stderr)
         return 2
+
+
+def _run_predict_command(args: argparse.Namespace) -> int:
+    """Predictive Security Intelligence CLI."""
+    import json as _json
+
+    from engines.predictive import render_predictive_markdown, run_predict
+
+    target = Path(args.path)
+    source: Path | dict
+    if target.is_file() and target.suffix.lower() == ".json":
+        try:
+            payload = _json.loads(target.read_text(encoding="utf-8"))
+        except (OSError, _json.JSONDecodeError) as exc:
+            print(f"error: cannot load JSON: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(payload, dict):
+            print("error: JSON root must be an object", file=sys.stderr)
+            return 2
+        source = payload
+    else:
+        source = target.resolve()
+        if not source.exists():
+            print(f"error: path not found: {source}", file=sys.stderr)
+            return 2
+
+    mode = getattr(args, "predict_mode", None) or "default"
+    result = run_predict(
+        source,
+        base=getattr(args, "base", None),
+        mode=mode,
+        memory_dir=None if getattr(args, "no_memory", False) else Path(args.memory_dir),
+        out_dir=Path(args.out_dir),
+        write_report=True,
+        with_twin=not getattr(args, "no_twin", False),
+        with_memory=not getattr(args, "no_memory", False),
+        scenario=getattr(args, "scenario", None),
+        remove_control=getattr(args, "remove_control", None),
+        grant_agent_tool=getattr(args, "grant_agent_tool", None),
+        compromise_entity=getattr(args, "compromise_entity", None),
+    )
+
+    if getattr(args, "as_json", False):
+        print(_json.dumps(result, indent=2, default=str))
+        return 0
+
+    summary = result.get("summary") or {}
+    scores = (result.get("scores") or {}).get("change_risk") or {}
+    print("predictive security complete")
+    print(f"  target     {result.get('target')}")
+    print(f"  mode       {result.get('mode')}")
+    print(f"  risks      {summary.get('risk_count', 0)}")
+    print(f"  change-risk band  {scores.get('band')}")
+    print(f"  debt band  {(result.get('debt') or {}).get('band')}")
+    report = result.get("report") or {}
+    if report.get("markdown"):
+        print(f"  md         {report['markdown']}")
+    if report.get("json"):
+        print(f"  json       {report['json']}")
+    print()
+    print(render_predictive_markdown(result))
+    return 0
 
 
 def _run_investigate_command(args: argparse.Namespace) -> int:

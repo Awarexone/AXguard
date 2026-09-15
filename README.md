@@ -168,6 +168,7 @@ open .findings/axguard/axguard-report.html
 | Need a report | `/axguard-report` |
 | Add a CI gate | `/axguard-ci` |
 | GitHub PR bot (self-host) | `axguard github setup` → [docs/github](docs/github/README.md) |
+| Predictive security risk | `axguard predict .` → [docs/predictive](docs/predictive/README.md) |
 | Full security-lead pass | `axguard-cso` |
 
 See the [command cheat sheet](COMMANDS-QUICK-REF.md).
@@ -193,6 +194,23 @@ axguard github status .
 - Privacy / AI: [docs/github/privacy.md](docs/github/privacy.md) · [docs/github/ai-providers.md](docs/github/ai-providers.md)
 - Architecture research: [docs/research/github-security-bot.md](docs/research/github-security-bot.md)
 - Marketplace prep only (no approval claimed): [docs/github/marketplace.md](docs/github/marketplace.md)
+
+## Predictive Security
+
+Predict **security risk expansion** from observable changes — not CVEs, not
+guaranteed future bugs. Separates Verified Issues from Predictive Risks.
+
+```bash
+axguard predict .
+axguard predict --pr --base ./base-checkout
+axguard predict --architecture
+axguard predict --agent
+axguard predict --mcp
+axguard predict --what-if
+```
+
+- Guide: [docs/predictive/README.md](docs/predictive/README.md)
+- Research: [docs/research/predictive-security.md](docs/research/predictive-security.md)
 
 ---
 
@@ -410,6 +428,7 @@ Beyond open-source tools, AwareXone also builds AI-driven defenses against scams
 | [DEV.md](DEV.md) | Setup and day-to-day development |
 | [docs/architecture.md](docs/architecture.md) | How the scanner works |
 | [docs/github/README.md](docs/github/README.md) | GitHub Security Bot (App adapter) |
+| [docs/predictive/README.md](docs/predictive/README.md) | Predictive security intelligence |
 | [docs/adding-rules.md](docs/adding-rules.md) | Adding detections |
 | [docs/plugin.md](docs/plugin.md) | Agent plugin setup |
 | [docs/SKILL-SCHEMA.md](docs/SKILL-SCHEMA.md) | Domain skill frontmatter + sections |

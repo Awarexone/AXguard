@@ -71,10 +71,36 @@ def build_summary_body(
             lines.append("**Security regression:** None detected.")
             lines.append("")
 
-        for extra in result.summary_lines:
-            lines.append(redact_text(extra))
-        if result.summary_lines:
+        # Keep Verified vs Predictive vs Improvements separated (additive)
+        predictive = None
+        if isinstance(result.meta, dict):
+            predictive = result.meta.get("predictive")
+        if isinstance(predictive, dict) and predictive.get("risks") is not None:
+            lines.append("---")
             lines.append("")
+            try:
+                from engines.predictive.github_output import (
+                    format_improvements_section,
+                    format_predictive_section,
+                )
+
+                lines.extend(format_predictive_section(predictive))
+                lines.extend(
+                    format_improvements_section(
+                        findings=result.findings,
+                        comparisons=list(predictive.get("comparisons") or []),
+                    )
+                )
+            except Exception:  # noqa: BLE001
+                for extra in result.summary_lines:
+                    lines.append(redact_text(extra))
+                if result.summary_lines:
+                    lines.append("")
+        else:
+            for extra in result.summary_lines:
+                lines.append(redact_text(extra))
+            if result.summary_lines:
+                lines.append("")
 
     if include_footer:
         lines.append("---")
