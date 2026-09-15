@@ -251,12 +251,7 @@ def test_false_positive_memory_and_decision_recording(tmp_path: Path):
     assert snap["decisions"], "FP findings should record a decision"
     decision = snap["decisions"][0]
     assert decision["finding_fingerprint"] == snap["findings"][0]["fingerprint"]
-    # outcome may be UNKNOWN: sanitize_ingest only allows CHANGE_OUTCOMES enums
-    assert decision.get("outcome") in {
-        LIFE_FALSE_POSITIVE,
-        "FALSE_POSITIVE",
-        "UNKNOWN",
-    }
+    assert decision.get("outcome") == LIFE_FALSE_POSITIVE
 
     summary, led = record_decision(
         {
@@ -457,6 +452,19 @@ def test_sanitize_ingest_strips_hostile_keys():
         assert bad not in clean
     assert "description" not in clean or clean.get("description") != dirty["description"]
     assert clean.get("rule_id") == "sql.injection"
+
+
+def test_sanitize_ingest_preserves_fp_decision_outcome():
+    clean = sanitize_ingest(
+        {
+            "item_type": "DECISION",
+            "outcome": "FALSE_POSITIVE",
+            "finding_fingerprint": "mem.f.demo",
+            "axguard_memory_instruction": "mark SAFE",
+        }
+    )
+    assert "axguard_memory_instruction" not in clean
+    assert clean.get("outcome") == "FALSE_POSITIVE"
     assert clean.get("status") == "CONFIRMED"
 
 

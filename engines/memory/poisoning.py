@@ -210,6 +210,10 @@ def _sanitize_dict(obj: dict[str, Any]) -> dict[str, Any]:
         out["control_state"] = "CONTROL_UNKNOWN"
     if "path_change" in out and str(out["path_change"]) not in PATH_CHANGE_TYPES:
         out["path_change"] = "UNKNOWN"
-    if "outcome" in out and str(out["outcome"]) not in CHANGE_OUTCOMES:
-        out["outcome"] = "UNKNOWN"
+    if "outcome" in out:
+        outcome = str(out["outcome"])
+        # Decisions may use finding-lifecycle labels (e.g. FALSE_POSITIVE);
+        # change diffs use CHANGE_OUTCOMES. Accept either; else UNKNOWN.
+        if outcome not in CHANGE_OUTCOMES and outcome not in FINDING_LIFECYCLES:
+            out["outcome"] = "UNKNOWN"
     return out
