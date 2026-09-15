@@ -81,6 +81,7 @@ axguard about
 axguard engage disable
 axguard data discover
 axguard data report fixtures/data_pipeline
+axguard twin build .   # Security Twin — see docs/twin/README.md
 axguard audit . --fail-on high --out-dir .findings/axguard
 ```
 
