@@ -1,0 +1,50 @@
+# AXGuard — repository config for the GitHub Security Bot / Core
+# Docs: docs/github/config.md
+# Secrets live in env / secret manager only — never in this file.
+
+github:
+  # Env var *names* only
+  app_id_env: AXGUARD_GITHUB_APP_ID
+  private_key_path_env: AXGUARD_GITHUB_PRIVATE_KEY_PATH
+  private_key_env: AXGUARD_GITHUB_PRIVATE_KEY
+  webhook_secret_env: AXGUARD_GITHUB_WEBHOOK_SECRET
+  webhook_host: 127.0.0.1
+  webhook_port: 8787
+
+review:
+  enabled: true
+  on_pull_request: true
+  check_name: "AXGuard Security Review"
+  include_footer: true
+
+preship:
+  enabled: true
+  check_name: "AXGuard Pre-Ship"
+
+watch:
+  enabled: false
+  on_push: true
+  on_release: true
+  check_name: "AXGuard Watch"
+
+policy:
+  fail_on: [critical, high]
+  review_on: [likely]
+  fail_on_analysis_error: false
+  fail_on_unverified: false
+  medium_fail: false
+
+analysis:
+  mode: balanced
+  max_changed_files: 200
+  max_annotations: 50
+
+ai:
+  provider: none
+  mode: no-llm
+  api_key_env: AXGUARD_AI_API_KEY
+  base_url_env: AXGUARD_AI_BASE_URL
+
+privacy:
+  retain_source: false
+  log_source: false

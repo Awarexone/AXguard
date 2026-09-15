@@ -180,9 +180,44 @@ See the [command cheat sheet](COMMANDS-QUICK-REF.md).
 
 ## GitHub Security Bot
 
-Optional GitHub App adapter: review PRs with Check Runs + one updatable summary
-comment. Runs AXGuard Core behind a thin webhook adapter (`engines/github/`).
-Local CLI scanning does **not** require it.
+Optional GitHub App that reviews pull requests with Check Runs and one updatable
+summary comment. Runs AXGuard Core behind a thin webhook adapter
+(`engines/github/`). Local CLI scanning does **not** require it.
+
+### Add the bot to a repository
+
+**A. GitHub App (Check Runs + PR comment)** — preferred when you can self-host:
+
+1. Create a GitHub App with the permissions in [docs/github/permissions.md](docs/github/permissions.md).
+2. Install it on **Only select repositories** (e.g. this repo).
+3. Point the webhook at your adapter and export credentials (never commit them):
+
+```bash
+export AXGUARD_GITHUB_APP_ID=…
+export AXGUARD_GITHUB_WEBHOOK_SECRET=…
+export AXGUARD_GITHUB_PRIVATE_KEY_PATH=/path/to/app.pem
+```
+
+4. In the target repo:
+
+```bash
+axguard github setup .          # writes .axguard.yml (no secrets)
+axguard github validate .
+# run the adapter — see docs/github/self-hosting.md
+axguard github status .
+```
+
+**B. Actions-only (no webhook host)** — what this repository uses in CI:
+
+```bash
+# .github/workflows/axguard.yml runs on pull_request / push to main:
+axguard audit . --fail-on high --no-banner
+```
+
+That path runs Core in CI; it does not replace App Check Runs unless you also
+wire the App.
+
+### CLI
 
 ```bash
 axguard github setup .
@@ -192,7 +227,7 @@ axguard github status .
 ```
 
 - Install & permissions: [docs/github/install.md](docs/github/install.md) · [docs/github/permissions.md](docs/github/permissions.md)
-- Config (new `.axguard.yml`): [docs/github/config.md](docs/github/config.md)
+- Config (`.axguard.yml`): [docs/github/config.md](docs/github/config.md)
 - Self-host (preferred): [docs/github/self-hosting.md](docs/github/self-hosting.md)
 - Privacy / AI: [docs/github/privacy.md](docs/github/privacy.md) · [docs/github/ai-providers.md](docs/github/ai-providers.md)
 - Architecture research: [docs/research/github-security-bot.md](docs/research/github-security-bot.md)
@@ -475,6 +510,7 @@ checks on itself:
 | Check | Workflow |
 |---|---|
 | CI tests + fixture self-scan | [`ci.yml`](.github/workflows/ci.yml) |
+| AXGuard Security Review (PR bot / Core) | [`axguard.yml`](.github/workflows/axguard.yml) |
 | CodeQL (Python) | [`codeql.yml`](.github/workflows/codeql.yml) |
 | Secret detection (Gitleaks) | [`gitleaks.yml`](.github/workflows/gitleaks.yml) |
 | Dependency vulns (OSV-Scanner) | [`osv-scanner.yml`](.github/workflows/osv-scanner.yml) |
