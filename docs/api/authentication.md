@@ -1,16 +1,10 @@
-# Authentication
+# API Authentication
 
-Default: localhost bind with optional auth.
+- Loopback (`127.0.0.1` / `localhost`) trusts local callers by default.
+- Set `AXGUARD_API_REQUIRE_AUTH=1` to require `Authorization: Bearer axg_…` keys.
+- Keys are hashed at rest (salt + SHA-256). Plaintext is shown once at creation.
 
 ```bash
-# Require keys even on loopback
-export AXGUARD_API_REQUIRE_AUTH=1
-
-axguard api keys create --name ci --scopes 'scans:write,findings:read,projects:read'
+axguard api keys create --name local --scopes '*'
+curl -H "Authorization: Bearer axg_…" http://127.0.0.1:8787/v1/projects
 ```
-
-```http
-Authorization: Bearer axg_...
-```
-
-Keys are hashed at rest, shown once at creation, rotatable via create+revoke. No AwareXone accounts.

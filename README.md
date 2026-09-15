@@ -45,6 +45,8 @@ AXguard is built by **[Shuvonsec](https://github.com/shuvonsec)** — Ethical ha
 
 **AXguard is a pre-ship security gate.**
 
+It also ships a **local-first Security Intelligence API** (`axguard api start` → `http://127.0.0.1:8787`). No AwareXone account or hosted LLM — use **no-llm** (default), Ollama/local, or BYOK. Install with `pip install -e '.[api]'`. See [docs/api/overview.md](docs/api/overview.md).
+
 Before you publish an app — especially one built with AI — AXguard checks your code for common security problems, helps you fix them, and creates clear security reports.
 
 It can find:
@@ -168,6 +170,7 @@ open .findings/axguard/axguard-report.html
 | Need a report | `/axguard-report` |
 | Add a CI gate | `/axguard-ci` |
 | GitHub PR bot (self-host) | `axguard github setup` → [docs/github](docs/github/README.md) |
+| Local Security Intelligence API | `axguard api start` → [docs/api](docs/api/overview.md) |
 | Predictive security risk | `axguard predict .` → [docs/predictive](docs/predictive/README.md) |
 | Full security-lead pass | `axguard-cso` |
 

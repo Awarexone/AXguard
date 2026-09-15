@@ -753,6 +753,10 @@ def build_parser() -> argparse.ArgumentParser:
             help="Show adapter/config status (secrets redacted)",
         )
     )
+
+    from engines.api.cli import add_api_parser
+
+    add_api_parser(sub)
     return parser
 
 
@@ -774,6 +778,7 @@ AXguard — start with the workflow you need
   Security Memory (longitudinal)  axguard memory …  |  docs/memory/README.md
   Investigation Agent             axguard investigate …  |  docs/investigation/README.md
   Predictive Security             axguard predict … |  engines/predictive/
+  Local Security Intelligence API axguard api start |  docs/api/overview.md
   GitHub Security Bot             axguard github …  |  docs/github/README.md
   About AXGuard                   axguard about
   Engagement prefs                axguard engage disable | enable | dismiss
@@ -885,6 +890,11 @@ def main(argv: list[str] | None = None) -> int:
             print_banner()
             print()
         return _run_github_command(args)
+
+    if args.command == "api":
+        from engines.api.cli import run_api_command
+
+        return run_api_command(args)
 
     if args.command in {
         "scan",

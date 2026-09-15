@@ -7,17 +7,10 @@ AXGuard Core
       ↓
 Local Security Intelligence API
       ↓
-+-----+---------+---------+
-|     |         |         |
-CLI  MCP*    GitHub*    CI/CD
-|     |         |         |
-Human AI      PRs      Pipelines
-      |
+CLI / CI / integrations
       ↓
 User-controlled LLM / local model / NO_LLM
 ```
-
-\* MCP and GitHub App are designed against this API; they are not required for API use.
 
 ## Product principle
 
@@ -39,4 +32,4 @@ axguard api start
 # → http://127.0.0.1:8787
 ```
 
-See [quickstart](quickstart.md), [authentication](authentication.md), [providers](providers.md), [security](security.md).
+See [quickstart](quickstart.md), [authentication](authentication.md), [providers](providers.md), [security](security.md), [mcp-contracts](mcp-contracts.md).
