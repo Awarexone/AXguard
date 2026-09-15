@@ -1,0 +1,9 @@
+title = "AXGuard gitleaks config"
+
+[allowlist]
+description = "AXGuard intentional fixtures, packaged detection rules, and tests"
+paths = [
+  '''(^|/)fixtures/''',
+  '''(^|/)rules/''',
+  '''(^|/)tests/''',
+]

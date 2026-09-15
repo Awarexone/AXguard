@@ -1,0 +1,9 @@
+{
+  "name": "axguard",
+  "version": "0.1.0",
+  "description": "Pre-ship security gate — A→Z audit, triage, fix, and HTML/MD reports for Claude Code, Cursor, and other agent harnesses.",
+  "author": {
+    "name": "AXguard"
+  },
+  "keywords": ["security", "sast", "audit", "pre-ship", "owasp", "agent"]
+}

@@ -1,0 +1,32 @@
+{
+  "notes": "Expected Judge statuses for Phase 3 Hunter→Judge diagnostic (not a vuln advisory).",
+  "cases": [
+    {
+      "file": "sql_tainted.py",
+      "vuln": "sql-injection",
+      "expect_status": ["VERIFIED", "LIKELY"]
+    },
+    {
+      "file": "sql_parameterized.py",
+      "vuln": "sql-injection",
+      "expect_status": ["FALSE_POSITIVE"]
+    },
+    {
+      "file": "ssrf_tainted.py",
+      "vuln": "ssrf",
+      "expect_status": ["VERIFIED", "LIKELY"]
+    },
+    {
+      "file": "ambiguous.py",
+      "vuln": "sql-injection",
+      "expect_status": ["UNVERIFIED"]
+    },
+    {
+      "file": "comment_only_fp.py",
+      "vuln": null,
+      "expect_status": ["FALSE_POSITIVE"],
+      "allow_no_candidates": true,
+      "forbid_status": ["VERIFIED"]
+    }
+  ]
+}

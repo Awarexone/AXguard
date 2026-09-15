@@ -1,0 +1,44 @@
+{
+  "rules": [
+    {
+      "id": "sql.python-format-query",
+      "title": "SQL built with string formatting",
+      "severity": "critical",
+      "cwe": "CWE-89",
+      "owasp": "A03:2021-Injection",
+      "languages": ["python"],
+      "pattern": "(?i)(execute|executemany|raw)\\s*\\(\\s*(f['\\\"]|['\\\"].*%[sdf]|['\\\"].*\\.format\\(|['\\\"].*\\+)",
+      "message": "Dynamic SQL via f-strings/format/concat is a classic SQLi sink.",
+      "fix": "Use parameterized queries / bind variables only."
+    },
+    {
+      "id": "sql.js-concat-query",
+      "title": "SQL string concatenation in JS/TS",
+      "severity": "critical",
+      "cwe": "CWE-89",
+      "languages": ["javascript", "typescript"],
+      "pattern": "(?i)(query|execute|sql)\\s*\\(\\s*[`'\"][^`'\"]*\\$\\{|[`'\"][^`'\"]*\\+|[`'\"][^`'\"]*\\+",
+      "message": "Interpolating user input into SQL strings enables injection.",
+      "fix": "Use prepared statements or a typed query builder with placeholders."
+    },
+    {
+      "id": "sql.php-concat",
+      "title": "PHP SQL concatenation",
+      "severity": "critical",
+      "cwe": "CWE-89",
+      "languages": ["php"],
+      "pattern": "(?i)(mysqli_query|mysql_query|->query|->exec)\\s*\\([^;]*\\$",
+      "message": "Variable interpolation into SQL is a high-confidence SQLi lead.",
+      "fix": "Use prepared statements with bound parameters."
+    },
+    {
+      "id": "sql.raw-orm",
+      "title": "ORM raw SQL helper",
+      "severity": "high",
+      "cwe": "CWE-89",
+      "pattern": "(?i)\\.(raw|from_sql|execute_sql|text\\()\\s*\\(",
+      "message": "Raw SQL helpers bypass ORM parameterization unless you bind carefully.",
+      "fix": "Prefer ORM APIs; if raw SQL is required, bind all inputs."
+    }
+  ]
+}

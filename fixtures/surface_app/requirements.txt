@@ -1,0 +1,6 @@
+flask
+requests
+openai
+anthropic
+celery
+PyJWT

@@ -1,0 +1,52 @@
+# AXGuard project config (optional)
+# Docs: docs/github/config.md
+# Copy to repo root as .axguard.yml — never commit secrets.
+
+github:
+  # Env var *names* only — never put secrets in this file
+  app_id_env: AXGUARD_GITHUB_APP_ID
+  private_key_path_env: AXGUARD_GITHUB_PRIVATE_KEY_PATH
+  private_key_env: AXGUARD_GITHUB_PRIVATE_KEY
+  webhook_secret_env: AXGUARD_GITHUB_WEBHOOK_SECRET
+  webhook_host: 127.0.0.1
+  webhook_port: 8787
+
+review:
+  enabled: true
+  on_pull_request: true
+  on_push: false
+  check_name: "AXGuard Security Review"
+  include_footer: true
+
+preship:
+  enabled: true
+  check_name: "AXGuard Pre-Ship"
+
+watch:
+  enabled: false
+  on_push: true
+  on_release: true
+  check_name: "AXGuard Watch"
+
+policy:
+  fail_on: [critical, high]
+  review_on: [likely]
+  fail_on_analysis_error: false
+  fail_on_unverified: false
+  medium_fail: false
+
+analysis:
+  mode: balanced   # fast | balanced | deep
+  max_changed_files: 200
+  max_annotations: 50
+
+ai:
+  provider: none   # none | local | openai | anthropic | openrouter | ollama
+  mode: no-llm     # no-llm | local | user_key
+  model: null
+  api_key_env: AXGUARD_AI_API_KEY
+  base_url_env: AXGUARD_AI_BASE_URL
+
+privacy:
+  retain_source: false
+  log_source: false

@@ -1,0 +1,84 @@
+{
+  "notes": "Expected Phase 6 attack-path statuses (attack-paths.json, diagnostic — not a vuln advisory). Statuses follow docs/attack-graph.md: CONFIRMED | LIKELY | UNVERIFIED | INVALID | BLOCKED. These are design targets for the not-yet-built engines/attack_graph/ — no engine exists yet to produce attack-paths.json against these fixtures.",
+  "cases": [
+    {
+      "file": "simple_chain.py",
+      "chain": "public entrypoint -> sql-injection -> sensitive asset",
+      "hops": 2,
+      "tags": ["direct_chain"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"]
+    },
+    {
+      "file": "multi_chain.py",
+      "chain": "ssrf -> internal endpoint -> credential exposure",
+      "hops": 3,
+      "tags": ["ssrf_chain"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "notes": "Internal endpoint has no auth/network-segmentation control in code, so nothing legitimately blocks the SSRF-fed hop."
+    },
+    {
+      "file": "blocked_path.py",
+      "chain": "public internet -> admin-only sql-injection endpoint",
+      "hops": 2,
+      "tags": ["control_barrier"],
+      "expect_path_exists": true,
+      "expect_status": ["BLOCKED"],
+      "forbid_status": ["CONFIRMED"],
+      "notes": "require_admin is effective (validates signature + expiry + role, fails closed). The finding may still stand alone as CONFIRMED/LIKELY for an already-authenticated admin — only the unauthenticated-attacker PATH is BLOCKED."
+    },
+    {
+      "file": "unknown_reachability.py",
+      "chain": "queue consumer -> command-injection -> filesystem",
+      "hops": 2,
+      "tags": ["reachability_unknown"],
+      "expect_path_exists": true,
+      "expect_status": ["UNVERIFIED"],
+      "forbid_status": ["CONFIRMED", "INVALID", "BLOCKED"],
+      "notes": "No code-visible publisher/trust boundary for this queue. Must not default to public or internal-only."
+    },
+    {
+      "file": "false_chain.py",
+      "chain": "reflected-xss (/search) and path-traversal (/reports/download) — same file, unrelated",
+      "hops": 0,
+      "tags": ["no_relation"],
+      "expect_path_exists": false,
+      "expect_status": [],
+      "forbid_status": ["CONFIRMED", "LIKELY"],
+      "notes": "Same-file co-location must not be upgraded into a chain. If a path linking finding_a and finding_b is ever emitted, it must be INVALID; the preferred outcome is that no such path is generated at all (two standalone dead-end findings)."
+    },
+    {
+      "file": "priv_esc.py",
+      "chain": "authenticated user -> mass-assignment role escalation -> admin directory listing",
+      "hops": 2,
+      "tags": ["priv_esc"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "notes": "require_admin trusts the same mutable role field the user just set on themselves, so the control is ineffective and does not block."
+    },
+    {
+      "file": "cross_tenant.py",
+      "chain": "tenant-A identity -> broken object-level authz -> tenant-B invoice/PII",
+      "hops": 2,
+      "tags": ["cross_tenant"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "notes": "require_org_member checks caller org membership but never re-checks the returned invoice's org_id, so tenant isolation is not actually enforced on this query."
+    },
+    {
+      "file": "ai_chain.py",
+      "chain": "prompt injection (fetched page) -> agent -> privileged read_internal_file tool -> secrets file",
+      "hops": 3,
+      "tags": ["ai_chain", "prompt_injection"],
+      "expect_path_exists": true,
+      "expect_status": ["CONFIRMED", "LIKELY"],
+      "forbid_status": ["INVALID", "BLOCKED"],
+      "notes": "No allowlist and no human-confirmation gate on the tool call. Would become BLOCKED if a path allowlist or confirm_with_user() check were added and effective."
+    }
+  ]
+}

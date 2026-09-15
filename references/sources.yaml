@@ -1,0 +1,96 @@
+# sources.yaml — filled/extended as research completes
+# accessed: 2026-09-15
+
+sources:
+  - name: OWASP Top 10 2021
+    type: framework
+    url: https://owasp.org/Top10/
+    license: CC-BY-SA-4.0
+    version: "2021"
+    accessed: "2026-09-15"
+    relevance: high
+    skills: [authorization-analysis, authentication-analysis, sql-injection, xss-analysis, ssrf-analysis, secrets-detection, supply-chain-security]
+
+  - name: OWASP API Security Top 10 2023
+    type: framework
+    url: https://owasp.org/API-Security/
+    license: CC-BY-SA-4.0
+    version: "2023"
+    accessed: "2026-09-15"
+    relevance: high
+    skills: [api-security, authorization-analysis, authentication-analysis]
+
+  - name: OWASP LLM Top 10
+    type: framework
+    url: https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/
+    license: check-official-page
+    version: "2026"
+    accessed: "2026-09-15"
+    relevance: high
+    skills: [prompt-injection, ai-agent-security, ai-application-security, mcp-security]
+    note: Pin LLM0x:2026 IDs; do not mix 2025 labels from genai.owasp.org/llm-top-10 cards
+
+  - name: CWE
+    type: framework
+    url: https://cwe.mitre.org/
+    license: see-mitre
+    version: continuous
+    accessed: "2026-09-15"
+    relevance: high
+    skills: []
+
+  - name: NIST AI RMF
+    type: framework
+    url: https://www.nist.gov/itl/ai-risk-management-framework
+    license: public-domain-us-gov
+    version: "1.0"
+    accessed: "2026-09-15"
+    relevance: medium
+    skills: [ai-application-security, ai-agent-security]
+
+  - name: AwareXone Agentic-Bug-Hunter
+    type: repository
+    url: https://github.com/Awarexone/Agentic-Bug-Hunter
+    license: MIT
+    version: main
+    accessed: "2026-09-15"
+    relevance: high
+    skills: [security-triage, authorization-analysis, ssrf-analysis]
+
+  - name: AwareXone public-skills-builder
+    type: repository
+    url: https://github.com/Awarexone/public-skills-builder
+    license: check-repo
+    version: main
+    accessed: "2026-09-15"
+    relevance: medium
+    skills: []
+
+  - name: AwareXone web3-bug-bounty-hunting-ai-skills
+    type: repository
+    url: https://github.com/Awarexone/web3-bug-bounty-hunting-ai-skills
+    license: check-repo
+    version: main
+    accessed: "2026-09-15"
+    relevance: medium
+    skills: []
+
+  - name: CyberNative Code_Vulnerability_Security_DPO
+    type: dataset
+    url: https://huggingface.co/datasets/CyberNative/Code_Vulnerability_Security_DPO
+    license: apache-2.0
+    version: "2024-02"
+    accessed: "2026-09-15"
+    relevance: high
+    note: metadata + derived secure/insecure pattern concepts only; do not redistribute dataset
+    skills: [sql-injection, command-injection, deserialization-security]
+
+  - name: UVID unified-vulnerability-intelligence-dataset
+    type: dataset
+    url: https://huggingface.co/datasets/ismailtasdelen/unified-vulnerability-intelligence-dataset
+    license: mit
+    version: "3.0"
+    accessed: "2026-09-15"
+    relevance: high
+    note: use CWE/OWASP/CVSS linkage concepts; do not dump records
+    skills: [sql-injection, ssrf-analysis, xss-analysis]

@@ -1,0 +1,54 @@
+{
+  "rules": [
+    {
+      "id": "injection.python-eval",
+      "title": "Use of eval on untrusted input surface",
+      "severity": "high",
+      "cwe": "CWE-95",
+      "languages": ["python"],
+      "pattern": "\\beval\\s*\\(",
+      "message": "eval() executes arbitrary code. If any attacker-controlled string reaches this call, it is RCE.",
+      "fix": "Parse structured data with json/ast.literal_eval, or use an allowlisted interpreter."
+    },
+    {
+      "id": "injection.python-exec",
+      "title": "Use of exec()",
+      "severity": "high",
+      "cwe": "CWE-95",
+      "languages": ["python"],
+      "pattern": "\\bexec\\s*\\(",
+      "message": "exec() is a code-execution sink. Confirm inputs cannot be attacker-controlled.",
+      "fix": "Remove dynamic execution or strictly sandbox and allowlist."
+    },
+    {
+      "id": "injection.python-pickle-loads",
+      "title": "pickle.loads deserialization",
+      "severity": "critical",
+      "cwe": "CWE-502",
+      "languages": ["python"],
+      "pattern": "pickle\\.loads\\s*\\(",
+      "message": "pickle.loads on untrusted data enables arbitrary object construction and RCE.",
+      "fix": "Use json/msgpack for untrusted payloads; never unpickle attacker input."
+    },
+    {
+      "id": "injection.python-subprocess-shell",
+      "title": "subprocess with shell=True",
+      "severity": "high",
+      "cwe": "CWE-78",
+      "languages": ["python"],
+      "pattern": "subprocess\\.(run|Popen|call|check_output)\\([^\\n]*shell\\s*=\\s*True",
+      "message": "shell=True turns string building into command injection when input is tainted.",
+      "fix": "Pass argument lists with shell=False; never interpolate user input into a shell string."
+    },
+    {
+      "id": "injection.js-child-exec",
+      "title": "child_process exec with string command",
+      "severity": "high",
+      "cwe": "CWE-78",
+      "languages": ["javascript", "typescript"],
+      "pattern": "child_process\\.(exec|execSync)\\s*\\(",
+      "message": "exec/execSync run through a shell. Tainted strings become command injection.",
+      "fix": "Use execFile/spawn with an argv array and no shell."
+    }
+  ]
+}

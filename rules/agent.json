@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "id": "agent.exec-model-output",
+      "title": "Executing model or agent output",
+      "severity": "critical",
+      "cwe": "CWE-94",
+      "pattern": "(?i)(exec|eval|subprocess\\.|child_process|os\\.system)\\([^\\n]*(model|llm|completion|assistant|agent)",
+      "message": "Running code derived from model output is a direct RCE path under prompt injection.",
+      "fix": "Never exec model text. Use structured tool calls with allowlisted actions and human approval for destructive ops."
+    },
+    {
+      "id": "agent.unrestricted-tool-shell",
+      "title": "Agent tool exposes unrestricted shell",
+      "severity": "high",
+      "cwe": "CWE-78",
+      "pattern": "(?i)(tool|function)\\s*[:=].*(shell|bash|run_command|terminal)",
+      "message": "Shell tools without a tight allowlist let a compromised prompt own the host.",
+      "fix": "Constrain tools to typed APIs; sandbox; require confirmation for filesystem and network side effects."
+    }
+  ]
+}

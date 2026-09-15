@@ -1,0 +1,31 @@
+{
+  "rules": [
+    {
+      "id": "supply.npm-install-script",
+      "title": "Suspicious install lifecycle script",
+      "severity": "medium",
+      "cwe": "CWE-506",
+      "pattern": "\"(preinstall|postinstall|install)\"\\s*:\\s*\"[^\"]*(curl|wget|node\\s+-e|python|bash|sh)\\s",
+      "message": "Install scripts that download or eval code are a supply-chain risk.",
+      "fix": "Audit the package; pin versions; avoid untrusted deps with install hooks."
+    },
+    {
+      "id": "supply.pip-extra-index",
+      "title": "Extra/untrusted package index",
+      "severity": "medium",
+      "cwe": "CWE-494",
+      "pattern": "(?i)(--extra-index-url|--index-url)\\s+https?://(?!pypi\\.org|files\\.pythonhosted\\.org)",
+      "message": "Non-default indexes can enable dependency confusion / tampering.",
+      "fix": "Prefer official indexes; authenticate private indexes; pin hashes."
+    },
+    {
+      "id": "supply.curl-pipe-shell",
+      "title": "curl|wget piped to shell",
+      "severity": "high",
+      "cwe": "CWE-494",
+      "pattern": "(?i)(curl|wget).*(\\|\\s*(ba)?sh|\\|\\s*python)",
+      "message": "Piping remote scripts to a shell is a classic supply-chain foothold.",
+      "fix": "Download, verify checksum/signature, then run from a reviewed local file."
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "axguard"
+version = "0.2.0"
+description = "Pre-ship security gate for source and build artifacts"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+axguard = "cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["cli*", "engines*"]
+
+[tool.setuptools.package-data]
+# rules live at repo root; include via data files for editable installs
+"*" = []
+
+[tool.setuptools.data-files]
+"share/axguard/rules" = [
+  "rules/secrets.json",
+  "rules/injection.json",
+  "rules/ssrf.json",
+  "rules/auth.json",
+  "rules/xss.json",
+  "rules/cloud.json",
+  "rules/agent.json",
+  "rules/sql.json",
+  "rules/ssti.json",
+  "rules/path.json",
+  "rules/crypto.json",
+  "rules/supply.json",
+  "rules/graphql.json",
+  "rules/upload.json",
+  "rules/debug.json",
+  "rules/advanced.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

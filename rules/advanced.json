@@ -1,0 +1,88 @@
+{
+  "rules": [
+    {
+      "id": "nosql.mongo-where-operator",
+      "title": "MongoDB $where / operator injection surface",
+      "severity": "high",
+      "cwe": "CWE-943",
+      "pattern": "\\$(where|gt|ne|regex)\\b|find\\s*\\(\\s*req\\.(body|query|params)",
+      "message": "Passing request objects into Mongo queries enables operator injection.",
+      "fix": "Allowlist fields; cast types; never pass raw req.body into find()."
+    },
+    {
+      "id": "injection.os-system",
+      "title": "os.system / popen command sink",
+      "severity": "critical",
+      "cwe": "CWE-78",
+      "languages": ["python"],
+      "pattern": "os\\.(system|popen)\\s*\\(",
+      "message": "os.system/popen run through a shell. Tainted strings become RCE.",
+      "fix": "Use subprocess with argv lists and shell=False."
+    },
+    {
+      "id": "injection.php-unserialize",
+      "title": "PHP unserialize",
+      "severity": "critical",
+      "cwe": "CWE-502",
+      "languages": ["php"],
+      "pattern": "unserialize\\s*\\(",
+      "message": "unserialize on untrusted data enables object injection.",
+      "fix": "Use json_decode; never unserialize user input."
+    },
+    {
+      "id": "injection.java-objectinput",
+      "title": "Java ObjectInputStream deserialization",
+      "severity": "critical",
+      "cwe": "CWE-502",
+      "languages": ["java"],
+      "pattern": "ObjectInputStream|readObject\\s*\\(",
+      "message": "Java native deserialization is a historic RCE class.",
+      "fix": "Prefer JSON; if required, use look-ahead allowlisting."
+    },
+    {
+      "id": "auth.jwt-decode-without-verify",
+      "title": "JWT decode without verify",
+      "severity": "critical",
+      "cwe": "CWE-347",
+      "pattern": "(?i)jwt\\.(decode|decode_complete)\\s*\\(|jsonwebtoken\\.decode\\s*\\(|jwt\\.decode\\([^\\n]*verify\\s*=\\s*False",
+      "message": "Decoding JWTs without signature verification trusts attacker tokens.",
+      "fix": "Always verify with an explicit algorithm allowlist."
+    },
+    {
+      "id": "secrets.github-pat",
+      "title": "GitHub personal access token pattern",
+      "severity": "critical",
+      "cwe": "CWE-798",
+      "pattern": "gh[pousr]_[A-Za-z0-9_]{20,}",
+      "message": "Looks like a GitHub token committed to source.",
+      "fix": "Revoke/rotate immediately; use secrets vault / Actions secrets."
+    },
+    {
+      "id": "secrets.slack-token",
+      "title": "Slack token pattern",
+      "severity": "high",
+      "cwe": "CWE-798",
+      "pattern": "xox[baprs]-[0-9A-Za-z-]{10,}",
+      "message": "Possible Slack API token in source.",
+      "fix": "Revoke and store in a secret manager."
+    },
+    {
+      "id": "cloud.s3-public-acl",
+      "title": "S3 public ACL / public-read",
+      "severity": "high",
+      "cwe": "CWE-284",
+      "pattern": "(?i)(public-read|public-read-write|ACL\\s*=\\s*['\\\"]public|block_public_acls\\s*=\\s*false)",
+      "message": "Public bucket ACLs often leak data unintentionally.",
+      "fix": "Block public access; use signed URLs for intentional sharing."
+    },
+    {
+      "id": "agent.prompt-injection-exec",
+      "title": "Tool runs shell from prompt/tool args",
+      "severity": "critical",
+      "cwe": "CWE-77",
+      "pattern": "(?i)(tool|function)_?(call|handler).{0,80}(os\\.system|subprocess|shell=True|child_process|execSync)",
+      "message": "Agent tools that shell out on model-chosen args are prompt-injection RCE.",
+      "fix": "Allowlist tools; structured args only; sandbox; human approval for mutate ops."
+    }
+  ]
+}
