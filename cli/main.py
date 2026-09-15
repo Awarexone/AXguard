@@ -11,6 +11,20 @@ from engines.attack_graph import run_attack_graph, write_attack_graph_report
 from engines.audit import AuditOptions, run_audit
 from engines.banner import print_banner
 from engines.dataflow import analyze_dataflow, write_dataflow_report
+from engines.engagement import (
+    about_content,
+    disable_promo,
+    dismiss_support,
+    emit_after_audit,
+    emit_after_scan,
+    emit_first_run_if_needed,
+    emit_for_paths,
+    enable_promo,
+    load_state,
+    record_event,
+    render_cli,
+)
+from engines.engagement.schema import EVENT_ABOUT_VIEWED
 from engines.evidence import run_evidence, write_evidence_report
 from engines.paths import default_rules_dir
 from engines.report import render_report, write_reports
@@ -38,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan.add_argument("-o", "--output", help="Write report to file")
     scan.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+    scan.add_argument(
+        "--no-engage",
+        action="store_true",
+        help="Skip contextual engagement messages",
+    )
 
     audit = sub.add_parser(
         "audit",
@@ -55,6 +74,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print Markdown summary to stdout after writing files",
     )
     audit.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+    audit.add_argument(
+        "--no-engage",
+        action="store_true",
+        help="Skip contextual engagement messages",
+    )
 
     surface = sub.add_parser(
         "surface",
@@ -139,6 +163,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     paths_cmd.add_argument(
         "--no-banner", action="store_true", help="Hide the ASCII banner"
+    )
+    paths_cmd.add_argument(
+        "--no-engage",
+        action="store_true",
+        help="Skip contextual engagement messages",
     )
     # Phase 6 Part 2 — attack-path intelligence view filters (display only; the
     # written attack-paths.json always contains the full, unfiltered path set).
@@ -236,6 +265,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("version", help="Print version")
     sub.add_parser("help", help="Show Start Using workflow table")
+
+    about = sub.add_parser("about", help="About AXGuard (project story, no banner spam)")
+    about.add_argument("--no-banner", action="store_true", help="Hide the ASCII banner")
+
+    engage = sub.add_parser(
+        "engage",
+        help="Engagement preferences (local; no telemetry)",
+    )
+    engage_sub = engage.add_subparsers(dest="engage_command", required=True)
+    engage_sub.add_parser("disable", help="Disable promotional / support messaging")
+    engage_sub.add_parser("enable", help="Re-enable promotional messaging")
+    engage_sub.add_parser("dismiss", help="Dismiss the latest support ask (cooldown)")
     return parser
 
 
@@ -253,6 +294,8 @@ AXguard — start with the workflow you need
   Evidence & Confidence engine    axguard evidence .  |  /axguard-evidence
   Attack graph / vuln chaining    axguard paths .   |  /axguard-paths
   Training-data pipeline          axguard data …    |  /axguard-data
+  About AXGuard                   axguard about
+  Engagement prefs                axguard engage disable | enable | dismiss
   First look at a new codebase    /axguard-threat-model → /axguard-audit
   Secrets / auth / inject         /axguard-secrets · /axguard-auth · /axguard-inject
   SQL / SSTI / path               /axguard-sql · /axguard-ssti · /axguard-path
@@ -268,7 +311,14 @@ Reports land in:
   .findings/axguard/axguard-report.{html,md,json}
 
 Cheat sheet: COMMANDS-QUICK-REF.md
+Docs: docs/engagement.md (local prefs, no telemetry)
 """.strip()
+
+
+def _print_engagement(text: str | None) -> None:
+    if text:
+        print()
+        print(text.rstrip())
 
 
 def _add_target_args(parser: argparse.ArgumentParser) -> None:
@@ -313,6 +363,42 @@ def main(argv: list[str] | None = None) -> int:
         print(HELP_TEXT)
         return 0
 
+    if args.command == "about":
+        # Explicit about — no banner spam; best-effort ABOUT_VIEWED record
+        try:
+            record_event(EVENT_ABOUT_VIEWED, {"command": "about"})
+        except Exception:  # noqa: BLE001 — still print about content
+            pass
+        try:
+            text = render_cli(about_content(load_state())).rstrip()
+            if text:
+                print(text)
+        except Exception as exc:  # noqa: BLE001
+            print(f"error: about failed: {exc}", file=sys.stderr)
+            return 2
+        return 0
+
+    if args.command == "engage":
+        action = args.engage_command
+        try:
+            if action == "disable":
+                disable_promo()
+                print("Engagement promotional messaging disabled.")
+                print("State: ~/.axguard/engagement.json")
+            elif action == "enable":
+                enable_promo()
+                print("Engagement promotional messaging enabled.")
+            elif action == "dismiss":
+                dismiss_support()
+                print("Support ask dismissed (cooldown started).")
+            else:
+                parser.print_help()
+                return 2
+        except Exception as exc:  # noqa: BLE001
+            print(f"error: engage {action} failed: {exc}", file=sys.stderr)
+            return 2
+        return 0
+
     if args.command in {
         "scan",
         "audit",
@@ -328,6 +414,10 @@ def main(argv: list[str] | None = None) -> int:
         print_banner()
         print()
 
+    # First-run intro once (never for about/engage/version/help — handled above)
+    if not getattr(args, "no_engage", False):
+        _print_engagement(emit_first_run_if_needed())
+
     if args.command == "scan":
         target = Path(args.path).resolve()
         if not target.exists():
@@ -341,6 +431,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {args.output}")
         else:
             print(body)
+        # Skip engagement for json so stdout stays machine-readable
+        if not getattr(args, "no_engage", False) and args.format != "json":
+            _print_engagement(
+                emit_after_scan(result, html_written=(args.format == "html"))
+            )
         return 1 if _should_fail(result["findings"], args.fail_on) else 0
 
     if args.command == "audit":
@@ -438,6 +533,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.open_summary:
             print()
             print(render_report(result, "md"))
+        if not getattr(args, "no_engage", False):
+            _print_engagement(emit_after_audit(result))
         return 1 if _should_fail(result["findings"], args.fail_on) else 0
 
     if args.command == "surface":
@@ -657,6 +754,8 @@ def main(argv: list[str] | None = None) -> int:
             if not report.get("signals"):
                 print("    (no emerging-surface signals on this target)")
         # --- end Phase 6 Part2 predictive ---
+        if not getattr(args, "no_engage", False):
+            _print_engagement(emit_for_paths(ag_result))
         return 0
 
     if args.command == "data":
