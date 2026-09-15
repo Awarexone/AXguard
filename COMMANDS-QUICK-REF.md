@@ -14,6 +14,7 @@
 | Attack graph / vuln chaining | `/axguard-paths` |
 | Security Memory | `axguard memory …` |
 | Investigation Agent | `axguard investigate …` |
+| GitHub Security Bot | `axguard github setup\|validate\|test\|status` |
 | Training-data pipeline | `/axguard-data` |
 | Threat model first | `/axguard-threat-model` |
 | Secrets only | `/axguard-secrets` |
@@ -91,6 +92,11 @@ axguard engage disable
 axguard data discover
 axguard data report fixtures/data_pipeline
 axguard twin build .   # Security Twin — see docs/twin/README.md
+axguard investigate .  # Investigation Agent — see docs/investigation/README.md
+axguard github setup . # GitHub Security Bot — see docs/github/README.md
+axguard github validate .
+axguard github test .
+axguard github status .
 axguard audit . --fail-on high --out-dir .findings/axguard
 ```
 
