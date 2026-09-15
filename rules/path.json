@@ -6,7 +6,7 @@
       "severity": "high",
       "cwe": "CWE-22",
       "languages": ["python"],
-      "pattern": "open\\s*\\(\\s*(os\\.path\\.join|pathlib\\.|Path\\()[^\\n]*\\+|open\\s*\\(\\s*[a-zA-Z_][\\w\\.]*\\s*[,)]",
+      "pattern": "\\bopen\\s*\\(\\s*(os\\.path\\.join|pathlib\\.|Path\\()[^\\n]*\\+|\\bopen\\s*\\(\\s*[a-zA-Z_][\\w\\.]*\\s*[,)]",
       "message": "Opening paths built from variables can enable path traversal / LFI.",
       "fix": "Resolve under a fixed root and reject .. segments; use allowlists."
     },

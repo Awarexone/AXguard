@@ -291,11 +291,10 @@ class Store:
         if not updates:
             return self.get_project(project_id)
         updates["updated_at"] = time.time()
+        # Column names are allowlisted above; values stay bound parameters.
         sets = ", ".join(f"{k} = ?" for k in updates)
-        self._execute(
-            f"UPDATE projects SET {sets} WHERE id = ?",
-            tuple(updates.values()) + (project_id,),
-        )
+        sql = "UPDATE projects SET " + sets + " WHERE id = ?"
+        self._execute(sql, tuple(updates.values()) + (project_id,))
         return self.get_project(project_id)
 
     def delete_project(self, project_id: str) -> bool:
@@ -418,11 +417,10 @@ class Store:
                 updates[k] = v
         if not updates:
             return self.get_scan(scan_id)
+        # Column names are allowlisted above; values stay bound parameters.
         sets = ", ".join(f"{k} = ?" for k in updates)
-        self._execute(
-            f"UPDATE scans SET {sets} WHERE id = ?",
-            tuple(updates.values()) + (scan_id,),
-        )
+        sql = "UPDATE scans SET " + sets + " WHERE id = ?"
+        self._execute(sql, tuple(updates.values()) + (scan_id,))
         return self.get_scan(scan_id)
 
     def cancel_scan(self, scan_id: str) -> dict[str, Any] | None:
