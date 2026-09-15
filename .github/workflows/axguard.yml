@@ -31,5 +31,9 @@ jobs:
       - name: Install AXGuard
         run: python -m pip install -e .
 
+      # Dogfood shipped runtime code. fixtures/, skills/, commands/, and rules/
+      # intentionally contain vulnerable examples for regression tests.
       - name: Security review (fail on high+)
-        run: axguard audit . --fail-on high --no-banner
+        run: |
+          axguard audit engines --fail-on high --no-banner
+          axguard audit cli --fail-on high --no-banner

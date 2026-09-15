@@ -39,6 +39,7 @@
 | Regenerate reports | `/axguard-report` |
 | Add CI gate | `/axguard-ci` |
 | About / engagement prefs | `axguard about` · `axguard engage disable` |
+| Contribute / privacy (local) | `/axguard-contribute` · `/axguard-privacy` |
 
 ## Default pipeline
 
@@ -91,6 +92,9 @@ axguard investigate . --finding FINDING_ID
 axguard investigate --explain FINDING_ID
 axguard about
 axguard engage disable
+axguard privacy status
+axguard contribute status
+# slash: /axguard-privacy · /axguard-contribute
 axguard data discover
 axguard data report fixtures/data_pipeline
 axguard twin build .   # Security Twin — see docs/twin/README.md

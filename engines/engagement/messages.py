@@ -17,6 +17,7 @@ from engines.engagement.schema import (
     EVENT_ABOUT_VIEWED,
     EVENT_ATTACK_PATH_CONFIRMED,
     EVENT_AUDIT_COMPLETE,
+    EVENT_CONTRIBUTION_SUGGESTED,
     EVENT_FIRST_RUN,
     EVENT_FIX_VERIFIED,
     EVENT_FP_REJECTED,
@@ -431,6 +432,36 @@ CONTROL_MATTERS = EngagementMessage(
     priority=PRIORITY_PRODUCT_INFO,
 )
 
+CONTRIBUTE_FP_RECOGNITION = EngagementMessage(
+    id="contribute_fp_recognition",
+    stage=STATE_FIRST_MILESTONE,
+    event=EVENT_CONTRIBUTION_SUGGESTED,
+    body_lines=(
+        "AXGuard rejected a false positive in this session.",
+        "",
+        "That control-aware rejection is useful signal — the kind that improves rules and corpus cases.",
+        "",
+        "If you want, you can prepare a local false-positive fix package. Nothing is pushed unless you do it.",
+    ),
+    signature=SIGNATURE,
+    cta=_cta(CTA_CONTRIBUTE, "Optional: axguard contribute prepare"),
+    priority=PRIORITY_PRODUCT_INFO,
+)
+
+CONTRIBUTE_VERIFIED_RECOGNITION = EngagementMessage(
+    id="contribute_verified_recognition",
+    stage=STATE_FIRST_MILESTONE,
+    event=EVENT_CONTRIBUTION_SUGGESTED,
+    body_lines=(
+        "A finding was verified with evidence in this session.",
+        "",
+        "If the pattern is reusable, a local contribution package can capture it — only if you want.",
+    ),
+    signature=SIGNATURE,
+    cta=_cta(CTA_CONTRIBUTE, "Optional: axguard contribute suggest"),
+    priority=PRIORITY_PRODUCT_INFO,
+)
+
 
 def _with_cta(msg: EngagementMessage, cta: EngagementCTA | None) -> EngagementMessage:
     return EngagementMessage(
@@ -551,6 +582,22 @@ def select_message(
                 _cta(CTA_SUPPORT, "YC application profile", str(state["yc_url"])),
             )
         return ABOUT_PAGE
+
+    # Contribution recognition (optional CTA_CONTRIBUTE — not a star ask)
+    if event == EVENT_CONTRIBUTION_SUGGESTED:
+        if int(ctx.get("fp_rejected") or ctx.get("rejected_count") or 0) > 0:
+            if CONTRIBUTE_FP_RECOGNITION.id not in seen:
+                return CONTRIBUTE_FP_RECOGNITION
+        if (
+            int(ctx.get("verified_count") or 0) > 0
+            or ctx.get("novel_finding")
+            or ctx.get("first_verified")
+        ):
+            if CONTRIBUTE_VERIFIED_RECOGNITION.id not in seen:
+                return CONTRIBUTE_VERIFIED_RECOGNITION
+        if COMMUNITY_BELONGING.id not in seen:
+            return COMMUNITY_BELONGING
+        return None
 
     # First run — once
     if event == EVENT_FIRST_RUN or (stage == STATE_FIRST_RUN and not state.get("first_run_shown")):
@@ -676,5 +723,7 @@ MESSAGE_CATALOG: dict[str, EngagementMessage] = {
         VARIANT_SSRF_FLOW,
         VARIANT_SSRF_CHAIN,
         CONTROL_MATTERS,
+        CONTRIBUTE_FP_RECOGNITION,
+        CONTRIBUTE_VERIFIED_RECOGNITION,
     )
 }
